@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
 <stylesheets>
+    <stylesheet>
+        <name>MapQuest</name>
+        <url>mapquest/potlatch2/mapquest-us.css</url>
+    </stylesheet>
 	<stylesheet>
 		<name>Potlatch</name>
 		<url>potlatch.css</url>
@@ -20,9 +24,5 @@
     <stylesheet>
         <name>Bugs</name>
         <url>bugs.css</url>
-    </stylesheet>
-    <stylesheet>
-        <name>MapQuest</name>
-        <url>mapquest/potlatch2/mapquest-us.css</url>
     </stylesheet>
 </stylesheets>
