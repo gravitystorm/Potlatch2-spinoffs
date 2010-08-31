@@ -2,7 +2,11 @@
 
 <stylesheets>
     <stylesheet>
-        <name>MapQuest</name>
+        <name>MapQuest UK</name>
+        <url>mapquest/potlatch2/mapquest-uk.css</url>
+    </stylesheet>
+    <stylesheet>
+        <name>MapQuest US</name>
         <url>mapquest/potlatch2/mapquest-us.css</url>
     </stylesheet>
 	<stylesheet>
