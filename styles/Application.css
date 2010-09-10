@@ -4,7 +4,7 @@ Application {
   padding-right: 0;
   padding-top: 0;
   padding-bottom: 0;
-  backgroundColor: #c0c0c0;
+  backgroundColor: #e8f4d9;
   borderStyle: none;
 }
 
@@ -12,8 +12,8 @@ ApplicationControlBar {
   padding-top: 2;
   padding-bottom: 2;
   fillAlphas: 1.0,1.0;
-  fillColors: #e0e0e0, #c0c0c0;
-  backgroundColor: #c0c0c0;
+  fillColors: #e8f4d9, #c0c0c0;
+  backgroundColor: #e8f4d9;
   borderSkin: ClassReference("mx.skins.halo.ApplicationBackground");
 }
 
@@ -21,6 +21,7 @@ TitleWindow {
   borderAlpha: 0.8;
   borderThicknessLeft: 5;
   borderThicknessRight: 5;
+  borderColor: #e8f4d9;
 }
 
 .failText {
