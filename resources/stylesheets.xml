@@ -3,15 +3,15 @@
 <stylesheets>
     <stylesheet>
         <name>MapQuest UK</name>
-        <url>mapquest/potlatch2/mapquest-uk.css</url>
+        <url>mapquest/mapquest-uk.css</url>
     </stylesheet>
     <stylesheet>
         <name>MapQuest EU</name>
-        <url>mapquest/potlatch2/mapquest-eu.css</url>
+        <url>mapquest/mapquest-eu.css</url>
     </stylesheet>
     <stylesheet>
         <name>MapQuest US</name>
-        <url>mapquest/potlatch2/mapquest-us.css</url>
+        <url>mapquest/mapquest-us.css</url>
     </stylesheet>
 	<stylesheet>
 		<name>Potlatch</name>
