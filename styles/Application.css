@@ -4,25 +4,73 @@ Application {
   padding-right: 0;
   padding-top: 0;
   padding-bottom: 0;
-  backgroundColor: #e8f4d9;
+  backgroundColor: #eeeeee;
+  backgroundGradientColors: #eeeeee, #eeeeee;
+  backgroundGradientAlphas: 1, 1;
+  themeColor: #bbbbbb;
+  color: #333333;
+  backgroundGradientAlphas: 0, 0;
   borderStyle: none;
+  fontFamily: Arial;
 }
 
 ApplicationControlBar {
-  padding-top: 2;
-  padding-bottom: 2;
-  fillAlphas: 1.0,1.0;
-  fillColors: #e8f4d9, #c0c0c0;
-  backgroundColor: #e8f4d9;
-  borderSkin: ClassReference("mx.skins.halo.ApplicationBackground");
+  padding-top: 4;
+  padding-bottom: 1;
+  highlightAlphas: 0, 0;
+  fillAlphas: 1,1;
+  fillColors: #eeeeee, #eeeeee;
+  backgroundColor: #eeeeee;
+  dropShadowEnabled: false;
+  /*borderSkin: ClassReference("mx.skins.halo.ApplicationBackground");*/
 }
 
 TitleWindow {
-  borderAlpha: 0.8;
+  borderAlpha: 1;
   borderThicknessLeft: 5;
   borderThicknessRight: 5;
   borderColor: #e8f4d9;
 }
+
+VScrollBar {
+   cornerRadius: 0;
+   highlightAlphas: 0, 0;
+   fillAlphas: 0, 0, 0, 0;
+   fillColors: #ffffff, #ffffff, #ffffff, #ffffff;
+   trackColors: #eeeeee, #eeeeee;
+   borderColor: #999999;
+   thumbOffset: 1;
+}
+
+PopUpButton {
+   cornerRadius: 12;
+   paddingLeft: 10;
+   fontFamily: Arial;
+   fontSize: 11;
+   fontWeight: bold;
+   fillColors: #ffffff, #ffffff, #ffffff, #ffffff;
+   color: #51214d;
+   borderColor: #ffffff;
+}
+
+Button {
+   cornerRadius: 12;
+   paddingLeft: 10;
+   fontFamily: Arial;
+   fontSize: 11;
+   fontWeight: bold;
+   fillColors: #ffffff, #ffffff, #ffffff, #ffffff;
+   color: #51214d;
+   borderColor: #ffffff;
+}
+
+HDividedBox {
+   dividerAlpha: 1;
+   dividerColor: #51214d;
+   backgroundColor: #009ade;
+}
+
+
 
 .failText {
   color: red;
@@ -55,28 +103,26 @@ TitleWindow {
 
 .header {
 		fillColors: haloSilver, x222222;
-		fillAlphas: 1.0, 1.0;
+		fillAlphas: 0, 0;
 		selectedFillColors: haloBlue, black;
 		color: white;
 }
 
 .helpInfo {
-  fontStyle: italic;
-  fontSize: 11pt;
+  fontSize: 13;
+  color: #777777;
+  textAlign: right;
+  paddingLeft: 30;
+  paddingRight: 15;
 }
 
 .featureSelector {
   paddingTop: 3;
   paddingLeft: 3;
   paddingRight: 3;
+  verticalAlign: middle;
 }
 
-.editorContainer {
-  verticalGap: 4;
-  paddingTop: 3;
-  paddingLeft: 3;
-  paddingRight: 3;
-}
 
 .titledEditor {
   verticalGap: 0;
@@ -86,16 +132,112 @@ TitleWindow {
 
 
 .dndPanelTileList {
-  cornerRadius: 4px;
+	borderColor: #ffffff;
 }
 
+.dndEditorContainer {
+  verticalGap: 4;
+  paddingTop: 3;
+  paddingLeft: 3;
+  paddingRight: 3;
+  backgroundColor: #eeeeee;
+  color: #3b7700;
+  fontSize: 11;
+  fontWeight: bold;
+}
+
+TextInput {
+  color: #333333;
+}
 
 .dndPanelVbox {
-  paddingRight: 3px;
-  paddingLeft: 3px;
-  verticalGap: 0px;
+  paddingRight: 3;
+  paddingLeft: 3;
+  paddingTop: 15;
+  verticalGap: 0;
+  borderColor: #aaaaaa;
 }
 
 .dndPanelCategoryLabel {
-  paddingTop: 6px;
+  paddingTop: 9;
+  color: #3b7700;
+  fontSize: 11;
+  fontWeight: bold;
+  paddingBottom: 0;
+}
+
+.boogaloo{
+  borderColor: #aaaaaa;
+}
+
+.theToolBox {
+   backgroundColor: #eeeeee;
+   cornerRadius: 12;
+   headerHeight: 21;
+   titleStyleName: "mypanelTitle";
+   borderAlpha: 1.0;
+}
+
+.mypanelTitle {
+  textAlign: center;
+  color: #3b7700;
+  fontSize: 11;
+  fontWeight: bold;
+}
+
+.dndIconText {
+  color: #009ade;
+  fontSize: 14;
+  fontWeight: bold;
+}
+
+.dndTagHeader {
+  paddingBottom: 15;
+}
+
+.dndTagPopUpMenu {
+   fillColors: #dddddd, #dddddd, #dddddd, #dddddd;
+   borderColor: #aaaaaa;
+}
+
+.catToggleButtonBar {
+	themeColor: #51214d;
+   buttonStyleName: "mytoggleButtonBarButtonStyle";
+}
+
+.catToggleTiles {
+	themeColor: #cccccc;
+}
+
+.mytoggleButtonBarButtonStyle {
+   fillColors: #dddddd, #dddddd, #dddddd, #dddddd;
+}
+
+.dndStackTab {
+   backgroundColor: #eeeeee;
+   themeColor: #bbbbbb;
+   cornerRadius: 0;
+   borderColor: #999999;
+   tabStyleName: "myTabs";
+   firstTabStyleName: "myTabs";
+   lastTabStyleName: "myTabs";
+   selectedTabTextStyleName: "mySelectedTabs";
+}
+
+.dndStackAccordian {
+   themeColor: #bbbbbb;
+   cornerRadius: 0;
+   borderColor: #999999;
+}
+
+.myTabs {
+   cornerRadius: 12;
+   fillColors: #ffffff, #ffffff;
+   borderColor: #999999;
+   themeColor: #999999;
+
+}
+
+
+.mySelectedTabs {
 }
