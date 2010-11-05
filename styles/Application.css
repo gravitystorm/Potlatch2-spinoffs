@@ -224,7 +224,7 @@ TextInput {
    selectedTabTextStyleName: "mySelectedTabs";
 }
 
-.dndStackAccordian {
+.dndStackAccordion {
    themeColor: #bbbbbb;
    cornerRadius: 0;
    borderColor: #999999;

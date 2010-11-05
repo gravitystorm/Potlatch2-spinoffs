@@ -338,7 +338,7 @@
 		editorStackAccordion.percentWidth=100;
 		editorStackAccordion.percentHeight=100;
 		editorStackAccordion.creationPolicy="auto";
-		editorStackAccordion.styleName="dndStackAccordian";
+		editorStackAccordion.styleName="dndStackAccordion";
 
 		setEditorStackUI(true);
 	}
