@@ -29,7 +29,12 @@ TitleWindow {
   borderAlpha: 1;
   borderThicknessLeft: 5;
   borderThicknessRight: 5;
-  borderColor: #e8f4d9;
+  cornerRadius: 12px;
+  backgroundColor: #eeeeee;
+  borderColor: #dddddd;
+  color: #3b7700;
+  fontWeight: bold;
+  fontSize: 11pt;
 }
 
 VScrollBar {
@@ -42,26 +47,19 @@ VScrollBar {
    thumbOffset: 1;
 }
 
-PopUpButton {
-   cornerRadius: 12;
-   paddingLeft: 10;
+PopUpButton, Button {
    fontFamily: Arial;
    fontSize: 11;
    fontWeight: bold;
-   fillColors: #ffffff, #ffffff, #ffffff, #ffffff;
-   color: #51214d;
-   borderColor: #ffffff;
-}
-
-Button {
    cornerRadius: 12;
    paddingLeft: 10;
-   fontFamily: Arial;
-   fontSize: 11;
-   fontWeight: bold;
+   paddingRight: 10;
+   highlightAlphas: 0, 0;
+   fillAlphas: 1, 1, 1, 1;
    fillColors: #ffffff, #ffffff, #ffffff, #ffffff;
    color: #51214d;
-   borderColor: #ffffff;
+   textRollOverColor: #51214d;
+   borderColor: #dddddd;
 }
 
 HDividedBox {
@@ -96,9 +94,11 @@ HDividedBox {
 }
 
 .helpTN {
-  /*backgroundColor: #e8f4d9;*/
+  borderColor: #dddddd;
   cornerRadius: 5px;
   tabOffset: 10px;
+  color: #333333;
+  fontWeight: regular;
 }
 
 .header {
@@ -164,10 +164,6 @@ TextInput {
   fontSize: 11;
   fontWeight: bold;
   paddingBottom: 0;
-}
-
-.boogaloo{
-  borderColor: #aaaaaa;
 }
 
 .theToolBox {
