@@ -20,6 +20,14 @@
 		<name>OSM - Osmarender</name>
 		<url>http://tah.openstreetmap.org/Tiles/tile/$z/$x/$y.png</url>
 	</set>
+    <set>
+        <name>OSM - OpenCycleMap</name>
+        <url>http://tile.opencyclemap.org/cycle/$z/$x/$y.png</url>
+    </set>
+    <set>
+        <name>OSM - MapQuest</name>
+        <url>http://otile1.mqcdn.com/tiles/1.0.0/osm/$z/$x/$y.png</url>
+    </set>
     <set minlat="17" minlon="175" maxlat="72" maxlon="-46">
       <name>OSM - Tiger Edited Map</name>
       <type>900913</type>

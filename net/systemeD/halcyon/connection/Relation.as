@@ -13,12 +13,12 @@ package net.systemeD.halcyon.connection {
 			    member.entity.addParent(this);
         }
 
-        public function update(version:uint, tags:Object, loaded:Boolean, members:Array, uid:Number = NaN, timestamp:String = null):void {
+        public function update(version:uint, tags:Object, loaded:Boolean, parentsLoaded:Boolean, members:Array, uid:Number = NaN, timestamp:String = null):void {
 			var member:RelationMember;
 			for each (member in this.members)
 			    member.entity.removeParent(this);
 
-			updateEntityProperties(version,tags,loaded,uid,timestamp);
+			updateEntityProperties(version,tags,loaded,parentsLoaded,uid,timestamp);
 			this.members=members;
 			for each (member in members)
 			    member.entity.addParent(this);
@@ -79,29 +79,17 @@ package net.systemeD.halcyon.connection {
             performAction(new AddMemberToRelationAction(this, index, member, members));
         }
 
-        public function appendMember(member:RelationMember):uint {
-            members.push(member);
- 			member.entity.addParent(this);
-			markDirty();
-
-			dispatchEvent(new RelationMemberEvent(Connection.RELATION_MEMBER_ADDED, member.entity, this, members.length-1));
-            return members.length;
+        public function appendMember(member:RelationMember, performAction:Function):uint {
+            performAction(new AddMemberToRelationAction(this, -1, member, members));
+            return members.length + 1;
         }
 
 		public function removeMember(entity:Entity, performAction:Function):void {
 			performAction(new RemoveEntityFromRelationAction(this, entity, members));
 		}
 
-        public function removeMemberByIndex(index:uint):void {
-            var removed:Array=members.splice(index, 1);
-			var entity:Entity=removed[0].entity;
-			
-			// only remove as parent if this was only reference
-			if (findEntityMemberIndex(entity)==-1)
-			    entity.removeParent(this);
-			    
-			markDirty();
-            dispatchEvent(new RelationMemberEvent(Connection.RELATION_MEMBER_REMOVED, entity, this, index));
+        public function removeMemberByIndex(index:uint, performAction:Function):void {
+            performAction(new RemoveMemberByIndexAction(this, members, index));
         }
 
 		public override function remove(performAction:Function):void {

@@ -18,10 +18,10 @@ package net.systemeD.halcyon.connection {
 			calculateBbox();
         }
 
-		public function update(version:uint, tags:Object, loaded:Boolean, nodes:Array, uid:Number = NaN, timestamp:String = null):void {
+		public function update(version:uint, tags:Object, loaded:Boolean, parentsLoaded:Boolean, nodes:Array, uid:Number = NaN, timestamp:String = null):void {
 			var node:Node;
 			for each (node in this.nodes) { node.removeParent(this); }
-			updateEntityProperties(version,tags,loaded,uid,timestamp); this.nodes=nodes;
+			updateEntityProperties(version,tags,loaded,parentsLoaded,uid,timestamp); this.nodes=nodes;
 			for each (node in nodes) { node.addParent(this); }
 			calculateBbox();
 		}
@@ -44,7 +44,8 @@ package net.systemeD.halcyon.connection {
 		}
 		
 		public override function within(left:Number,right:Number,top:Number,bottom:Number):Boolean {
-			if ((edge_l<left   && edge_r<left  ) ||
+			if (!edge_l ||
+				(edge_l<left   && edge_r<left  ) ||
 			    (edge_l>right  && edge_r>right ) ||
 			    (edge_b<bottom && edge_t<bottom) ||
 			    (edge_b>top    && edge_b>top   ) || deleted) { return false; }
@@ -191,6 +192,7 @@ package net.systemeD.halcyon.connection {
 		public override function nullify():void {
 			nullifyEntity();
 			nodes=[];
+			edge_l=edge_r=edge_t=edge_b=NaN;
 		}
 		
 		public function get clockwise():Boolean {

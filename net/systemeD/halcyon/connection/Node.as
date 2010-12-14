@@ -14,8 +14,8 @@ package net.systemeD.halcyon.connection {
             this._lon = lon;
         }
 
-		public function update(version:uint, tags:Object, loaded:Boolean, lat:Number, lon:Number, uid:Number = NaN, timestamp:String = null):void {
-			updateEntityProperties(version,tags,loaded,uid,timestamp); setLatLonImmediate(lat,lon);
+		public function update(version:uint, tags:Object, loaded:Boolean, parentsLoaded:Boolean, lat:Number, lon:Number, uid:Number = NaN, timestamp:String = null):void {
+			updateEntityProperties(version,tags,loaded,parentsLoaded,uid,timestamp); setLatLonImmediate(lat,lon);
 		}
 
         public function get lat():Number {
@@ -81,6 +81,33 @@ package net.systemeD.halcyon.connection {
             } else {
               trace("not enough ways");
             }
+        }
+
+        /**
+        * Insert this node into the list of ways, and remove dupes at the same time.
+        * Please, don't call this on a node from a vector background, chaos will ensue.
+        */
+        public function join(ways:Array, performAction:Function):void {
+            if (this.isDupe() || ways.length > 0) {
+              var connection:Connection = Connection.getConnection();
+              var nodes:Array = connection.getNodesAtPosition(lat,lon);
+              // filter the nodes array to remove any occurances of this.
+              // Pass "this" as thisObject to get "this" into the callback function
+              var dupes:Array = nodes.filter(
+                  function(element:*, index:int, arr:Array):Boolean {
+                    return (element != this);
+                  },
+                  this
+                );
+              performAction(new JoinNodeAction(this, dupes, ways));
+            }
+        }
+
+        /**
+        * Replace all occurances of this node with the given target node
+        */
+        public function replaceWith(target:Node, performAction:Function):void {
+            performAction(new ReplaceNodeAction(this, target));
         }
 
         public function isDupe():Boolean {

@@ -12,8 +12,10 @@
 <mx:ViewStack id="sidebar" width="100%" height="100%" creationPolicy="all">
   <mx:VBox id="dndPanel" width="100%" height="100%" horizontalScrollPolicy="off" styleName="dndPanelVbox">
     <mx:Text id="dndPanelText" text="{dndPrompt}" width="100%" styleName="helpInfo" />
-	<mx:Repeater id="dndRep" dataProvider="{MapFeatures.getInstance().getCategoriesForType('point')}">
-		<mx:HBox width="100%"><mx:Label text="{dndRep.currentItem.name}:" styleName="dndPanelCategoryLabel"/></mx:HBox>
+	<mx:Repeater id="dndRep" dataProvider="{MapFeatures.getInstance().getCategoriesForType('point')}" styleName="dndRepeater">
+		<mx:HBox width="100%" styleName="dndPanelCategory">
+			<mx:Label text="{dndRep.currentItem.name}:" styleName="dndPanelCategoryLabel"/>
+		</mx:HBox>
 
 		<mx:TileList dataProvider="{dndRep.currentItem.getFeaturesForType('point')}" width="100%" height="1"
 			             updateComplete="resizePOIGrid(event)" styleName="dndPanelTileList">
@@ -46,7 +48,7 @@
 		</mx:TileList>
 	</mx:Repeater>
   </mx:VBox>
-  
+
   <mx:VBox id="tagsPanel" width="100%" height="100%" creationPolicy="auto">
     <mx:ViewStack id="stack" width="100%" height="100%">
       <mx:VBox width="100%" height="100%" label="Simple" id="editorContainer" creationComplete="initEditorStackUIs()" styleName="dndPanelVbox">
@@ -54,9 +56,11 @@
           <mx:HBox width="100%" id="iconContainer" styleName="featureSelector">
             <mx:Image id="iconImage"/>
             <mx:Text condenseWhite="true" width="100%" id="iconText" styleName="dndIconText"/>
-            <mx:LinkButton label="?" click="openDescription()" id="helpLabel" styleName="helpInfo"/>
           </mx:HBox>
-          <mx:PopUpButton id="popupChange" creationComplete="initFeatureBox()" openAlways="true" width="100%" styleName="dndTagPopUpMenu"/>
+          <mx:HBox width="100%">
+            <mx:PopUpButton id="popupChange" creationComplete="initFeatureBox()" openAlways="true" width="100%" styleName="dndTagPopUpMenu"/>
+            <mx:LinkButton icon="@Embed('../../../embedded/information.svg')" click="openDescription()" id="helpLabel" styleName="helpInfo"/>
+          </mx:HBox>
         </mx:VBox>
       </mx:VBox>
       <mx:VBox width="100%" height="100%" label="Advanced" id="advancedContainer" initialize="checkAdvanced()" verticalGap="1">
@@ -70,7 +74,7 @@
           <mx:LinkButton label="Delete" click="advancedTagGrid.removeTag()" enabled="{advancedTagGrid.selectedItem != null? true : false}"/>
           <mx:LinkButton label="Add" click="advancedTagGrid.addNewTag()" id="advancedAddButton"/>
         </mx:HBox>
-        
+
         <mx:DataGrid editable="true" width="100%" height="25%" id="relationsGrid"
             doubleClickEnabled="true"
             itemDoubleClick="editRelation(relationsGrid.selectedItem.id)"
@@ -78,12 +82,14 @@
             <mx:columns>
                 <mx:DataGridColumn editable="false" dataField="description" headerText="Relation"/>
                 <mx:DataGridColumn editable="false" dataField="id_idx" headerText="ID"/>
-                <mx:DataGridColumn editable="true" dataField="role" headerText="Role"/>
+                <mx:DataGridColumn editable="true" dataField="role" headerText="Role">
+                    <mx:itemEditor><mx:Component><mx:TextInput restrict="&#x0020;-&#x10FFFF;" /></mx:Component></mx:itemEditor>
+                </mx:DataGridColumn>
             </mx:columns>
         </mx:DataGrid>
 
         <mx:HBox horizontalAlign="right" width="100%">
-          <mx:LinkButton label="Remove from" click="removeFromRelation(relationsGrid.selectedItem.id, relationsGrid.selectedItem.index)" 
+          <mx:LinkButton label="Remove from" click="removeFromRelation(relationsGrid.selectedItem.id, relationsGrid.selectedItem.index)"
                           enabled="{relationsGrid.selectedItem != null? true : false}"/>
           <mx:LinkButton label="Add to" click="addToRelation()"/>
         </mx:HBox>
@@ -97,24 +103,26 @@
           <mx:columns>
             <mx:DataGridColumn editable="false" dataField="type" headerText="Type"/>
             <mx:DataGridColumn editable="false" dataField="id" headerText="ID"/>
-            <mx:DataGridColumn editable="true" dataField="role" headerText="Role"/>
+            <mx:DataGridColumn editable="true" dataField="role" headerText="Role">
+				<mx:itemEditor><mx:Component><mx:TextInput restrict="&#x0020;-&#x10FFFF;" /></mx:Component></mx:itemEditor>
+			</mx:DataGridColumn>
           </mx:columns>
         </mx:DataGrid>
       </mx:VBox>
-      
+
       </mx:ViewStack>
 
 	  <mx:HBox width="100%">
 		<mx:LinkBar dataProvider="{stack}"/>
 		<mx:Spacer width="100%"/>
-		<mx:LinkButton 
+		<mx:LinkButton
 			icon="@Embed('../../../embedded/view_tabbed.png')"
 			disabledIcon="@Embed('../../../embedded/view_tabbed_disabled.png')"
-			click="setEditorStackUI(true)" id="tabNavigatorLabel" paddingTop="6" 
+			click="setEditorStackUI(true)" id="tabNavigatorLabel" paddingTop="6"
 			toolTip="Show in tabs"
 			enabled="{editorStack is Accordion &amp;&amp; stack.selectedIndex==0}" />
 		<mx:LinkButton
-			icon="@Embed('../../../embedded/view_accordion.png')" 
+			icon="@Embed('../../../embedded/view_accordion.png')"
 			disabledIcon="@Embed('../../../embedded/view_accordion_disabled.png')"
 			click="setEditorStackUI(false)" id="accordionLabel" paddingTop="6"
 			toolTip="Show in sliding windows"
@@ -123,7 +131,15 @@
   </mx:VBox>
 
   <mx:VBox id="multiplePanel" width="100%" height="100%" horizontalScrollPolicy="off" styleName="dndPanelVbox">
-    <mx:Text id="multiplePanelText" text="You have selected multiple items." width="100%" styleName="helpInfo" />
+    <potlatch2:TagGrid id="multiAdvancedTagGrid" width="100%" height="75%" />
+	<mx:HBox horizontalAlign="right" width="100%">
+	  <mx:LinkButton label="Delete" click="multiAdvancedTagGrid.removeTag()" enabled="{multiAdvancedTagGrid.selectedItem != null? true : false}"/>
+	  <mx:LinkButton label="Add" click="multiAdvancedTagGrid.addNewTag()" />
+	</mx:HBox>
+  </mx:VBox>
+
+  <mx:VBox id="multipleInvalidPanel" width="100%" height="100%" horizontalScrollPolicy="off" styleName="dndPanelVbox">
+	<mx:Text id="multipleInvalidPanelText" text="You have selected multiple items." width="100%" styleName="helpInfo" />
   </mx:VBox>
 
   <mx:VBox id="markerPanel" width="100%" height="100%" horizontalScrollPolicy="off" styleName="dndPanelVbox">
@@ -166,18 +182,18 @@
 
 	  public function setEntity(entities:Array, layer:VectorLayer=null):void {
 		UIComponent.suspendBackgroundProcessing();
-		
+
 		var firstSelected:Entity=null;
 		if (entities.length==1) { firstSelected=entities[0]; }
-		
+
 		if (selectedEntity!=firstSelected && selectedEntity!=null) {
 			selectedEntity.removeEventListener(Connection.TAG_CHANGED, tagChanged);
 		}
-		
+
 		if (entities.length==0) {
 			// Nothing selected, so show drag-and-drop panel
 			sidebar.selectedChild = dndPanel;
-		
+
 		} else if (entities.length==1) {
 			// Single entity selected, so show tag panel
 			selectedEntity=firstSelected;
@@ -195,11 +211,16 @@
               initialiseEditors();
               sidebar.selectedChild = tagsPanel;
             }
-		
+
+		} else if(isMultipleEditable(entities)) {
+			selectedEntity = new EntityCollection(entities);
+			selectedEntity.addEventListener(Connection.TAG_CHANGED, tagChanged);
+            sidebar.selectedChild = multiplePanel;
+			setupMultiAdvanced(selectedEntity);
+
 		} else {
-			// Multiple selection, so for now show a largely blank panel/
-			// ** TODO - proper multiple selection tagging
-			sidebar.selectedChild = multiplePanel;
+			//The selection contains elements which can't be edited all together.
+			sidebar.selectedChild = multipleInvalidPanel;
 		}
 		UIComponent.resumeBackgroundProcessing();
       }
@@ -224,10 +245,10 @@
       private function featureImageChanged(event:Event):void {
           setFeatureIcon(selectedEntity, feature);
       }
-      
+
       private function setFeatureIcon(entity:Entity, feature:Feature):void {
           //blankFeatureIcon(entity);
-          
+
           iconImage.source = feature.image;
 
           var txt:String = feature.htmlDetails(entity);
@@ -237,7 +258,15 @@
           tw.setSelectedFeature(feature);
           helpLabel.visible = feature.hasHelpURL();
       }
-      
+
+	  private function isMultipleEditable(entities:Array):Boolean {
+		for each(var entity:Entity in entities) {
+			if(!(entity is Node || entity is Way))
+				return false;
+		}
+		return true;
+	  }
+
       private function setLimitTypes(entity:Entity):void {
           var type:String = null;
           if ( entity is Node )
@@ -253,33 +282,33 @@
           iconImage.source = null;
           popupChange.label = "unknown";
           setLimitTypes(entity);
-		  if (entity == null) { 
+		  if (entity == null) {
 			iconText.htmlText = "<i>Nothing selected</i>";
             tw.setNoSelectedFeature();
 		  } else if (entity.hasTags()) {
-			iconText.htmlText = "<b>Not recognised</b><br/>Try looking at the tags under the advanced properties";
+			iconText.htmlText = "<b>Not recognised</b><br/><font size='10pt'>Try looking at the tags under the advanced properties</font>";
             tw.setSelectedFeature(null);
 		  } else {
-			iconText.htmlText = "<b>No tags set</b><br/>Please use the menu below to define what this "+entity.getType()+" is";
+			iconText.htmlText = "<b>No tags set</b><br/><font size='10pt'>Please use the menu below to define what this "+entity.getType()+" is</font>";
             tw.setSelectedFeature(null);
           }
           helpLabel.visible = false;
       }
 
       private var tabComponents:Object = {};
-      
+
       private function initialiseEditors():void {
           editorStack.removeAllChildren();
           if ( selectedEntity == null || feature == null )
               return;
-          
+
           var editorBox:VBox = createEditorBox();
           editorBox.label = "Basic";
           editorStack.addChild(editorBox);
-          
+
           var tabs:Object = {};
           tabComponents = {};
-          
+
           for each (var factory:EditorFactory in feature.editors) {
               if ( factory.presence.isEditorPresent(factory, selectedEntity, null) ) {
                   var editor:DisplayObject = factory.createEditorInstance(selectedEntity);
@@ -303,7 +332,7 @@
               }
           }
       }
-      
+
       private function createEditorBox():VBox {
           var box:VBox = new VBox();
           box.percentWidth = 100;
@@ -320,7 +349,7 @@
               tab.addChild(component);
           }
       }
-      
+
 	private function initEditorStackUIs():void {
 		editorStackTabNavigator = new SuperTabNavigator();
 		editorStackTabNavigator.allowTabSqueezing=false;
@@ -363,7 +392,7 @@
 		editorStack.addEventListener("change",editorStackUIChange);
 		editorStack.addEventListener("updateComplete",editorStackUIUpdate);
 	}
-	
+
 	private function editorStackUIChange(event:Event):void {
 		ensureEditorsPopulated(IndexChangedEvent(event).relatedObject as VBox);
 	}
@@ -401,12 +430,14 @@
       private function advancedAddButtonKeyboardEvent(event:KeyboardEvent):void {
           switch (event.keyCode) {
             case 187:   addNewTag(); break;                          // + - add tag
+            case 107:   addNewTag(); break;                          // numpad plus
           }
       }
 
       private var listeningToRelations:Array = [];
-      
+
       private function setupAdvanced(entity:Entity):void {
+		if (!advancedTagGrid) advancedContainer.createComponentsFromDescriptors();	// if Flex hasn't created it, force it
 		advancedTagGrid.init(entity);
         advancedAddButton.addEventListener(KeyboardEvent.KEY_DOWN, advancedAddButtonKeyboardEvent);
 
@@ -435,11 +466,15 @@
 		}
       }
 
+	  private function setupMultiAdvanced(entity:Entity):void {
+		multiAdvancedTagGrid.init(entity);
+      }
+
 	  public function addNewTag():void {
 		if (stack.selectedChild!=advancedContainer) { return; }
 		advancedTagGrid.addNewTag();
 	  }
-      
+
       private function addedToRelation(event:RelationMemberEvent):void {
          resetRelationsGrid(selectedEntity);
       }
@@ -457,7 +492,7 @@
           listeningToRelations = [];
           relationsGrid.removeEventListener(DataGridEvent.ITEM_EDIT_END, relationRoleChanged);
       }
-            
+
       private function resetRelationsGrid(entity:Entity):void {
           removeRelationListeners();
           var relations:Array = [];
@@ -473,7 +508,7 @@
 
                   relations.push(props);
               }
-              
+
               rel.addEventListener(Connection.TAG_CHANGED, relationTagChanged);
               rel.addEventListener(Connection.RELATION_MEMBER_ADDED, entityRelationMemberChanged);
               rel.addEventListener(Connection.RELATION_MEMBER_REMOVED, entityRelationMemberChanged);
@@ -482,7 +517,7 @@
           relationsGrid.dataProvider = relations;
           relationsGrid.addEventListener(DataGridEvent.ITEM_EDIT_END, relationRoleChanged, false, -100);
       }
-      
+
       private function relationRoleChanged(event:DataGridEvent):void {
 		if (event.dataField != 'role') { return; }	// shouldn't really happen
 
@@ -503,13 +538,13 @@
       private function entityRelationMemberChanged(event:RelationMemberEvent):void {
           resetRelationsGrid(selectedEntity);
       }
-      
+
       private function checkMembers():void {
           if (selectedEntity is Relation) {
             setupMembers(selectedEntity as Relation);
           }
       }
-      
+
       private function setupMembers(rel:Relation):void {
           var members:Array = [];
           for (var i:int=0 ; i<rel.length; i++) {
@@ -518,26 +553,27 @@
             props["id"] = member.entity.id;
             props["type"] = member.entity.getType();
             props["role"] = member.role;
-            
+
             members.push(props);
           }
           membersGrid.dataProvider = members;
-          membersGrid.dataProvider.addEventListener('collectionChange', membersChange); 
+          membersGrid.dataProvider.addEventListener('collectionChange', membersChange);
       }
-      
+
       private function membersChange(event:Event):void {
           // Dropping all the members and re-adding them isn't exactly optimal
           // but is at least robust for any kind of change.
           // Figuring out a better way is someone else's FIXME
-          
+
           var conn:Connection = Connection.getConnectionInstance();
           var rel:Relation = selectedEntity as Relation
-          
+          var action:CompositeUndoableAction = new CompositeUndoableAction("Rearrange relation members for "+rel);
+
           // drop members
           for (var i:int=rel.length-1 ; i>=0; i--) {
-            rel.removeMemberByIndex(i);
+            rel.removeMemberByIndex(i, action.push);
           }
-          
+
           // add members in new order
           for each(var memberObject:Object in membersGrid.dataProvider) {
             var e:Entity;
@@ -549,19 +585,30 @@
             } else if (memberObject.type == 'relation') {
               e = conn.getRelation(id);
             }
-            rel.appendMember(new RelationMember(e, memberObject.role));
+            rel.appendMember(new RelationMember(e, memberObject.role), action.push);
           }
+          MainUndoStack.getGlobalStack().addAction(action);
       }
-      
+
       private function editRelation(id:Number):void {
           var panel:RelationEditorPanel = RelationEditorPanel(
               PopUpManager.createPopUp(Application(Application.application), RelationEditorPanel, true));
           panel.setRelation(Connection.getConnectionInstance().getRelation(id));
           PopUpManager.centerPopUp(panel);
       }
-      
+
       private function tagChanged(event:TagEvent):void {
+	      if(selectedEntity != null && selectedEntity is EntityCollection) {
+			setupMultiAdvanced(selectedEntity);
+		    return;
+		  }
+
           refreshFeatureIcon();
+
+          // Steve Bennett: I added this line 12 Dec because there was an update bug (majorly changing tags on Advanced tab doesn't update simple view)
+          // but I know how to use listeners.
+          initialiseEditors();//SB
+
           // if the advancedTagGrid has already been set up, it needs to be refreshed.
           // FIXME make this better, maybe advancedTagGrid should be event listening.
           if(advancedContainer.initialized) {
@@ -574,11 +621,13 @@
           stack.removeChild(membersVBox); // remove by default, will be added if relation
       }
 
+      /** Open up a new browser page, showing the help page as defined in Map Features XML file .*/
       public function openDescription():void {
           if ( feature != null && feature.hasHelpURL() )
               navigateToURL(new URLRequest(feature.helpURL), "potlatch_help");
       }
 
+      /** Open up a new browser page showing OSM's view of the current entity. */
       public function openEntityPage():void {
           if (selectedEntity != null && selectedEntity.id >= 0) {
               // This is slightly hard-coded, but not drastically. The ../s could be changed for string manipulation of the apiBase
@@ -590,17 +639,17 @@
       public function addToRelation():void {
           new RelationSelectPanel().init(selectedEntity,new Object());
       }
-      
-      public function removeFromRelation(id:Number, index:int):void {
-          Connection.getConnectionInstance().getRelation(id).removeMemberByIndex(index);
+
+      private function removeFromRelation(id:Number, index:int):void {
+          Connection.getConnectionInstance().getRelation(id).removeMemberByIndex(index, MainUndoStack.getGlobalStack().addAction);
       }
-      
+
       public function initFeatureBox():void {
           tw = new CategorySelector();
           tw.addEventListener("selectedType", changeFeatureType);
           popupChange.popUp = tw;
       }
-      
+
       public function changeFeatureType(event:Event):void {
           if ( selectedEntity == null )
               return;
@@ -618,21 +667,21 @@
                   selectedEntity.setTag(oldtag["k"], null, action.push);
               }
           }
-          
+
           // set tags for new feature
           if ( newFeature != null ) {
               for each( var newtag:Object in newFeature.tags ) {
                   selectedEntity.setTag(newtag["k"], newtag["v"], action.push);
               }
           }
-          
+
 		  selectedEntity.resume();
           undoStack(action);
           popupChange.close();
           initialiseEditors();
           UIComponent.resumeBackgroundProcessing();
       }
-      
+
 	private function resizePOIGrid(event:Event):void {
 		var rows:Number=event.target.dataProvider.length/event.target.columnCount;
 		if (rows!=Math.floor(rows)) { rows=Math.floor(rows+1); }

@@ -1,6 +1,7 @@
 package net.systemeD.potlatch2 {
     import net.systemeD.halcyon.Map;
     import net.systemeD.halcyon.MapController;
+    import net.systemeD.halcyon.MapEvent;
     import net.systemeD.halcyon.connection.*;
     import net.systemeD.halcyon.VectorLayer;
     import net.systemeD.potlatch2.controller.*;
@@ -25,6 +26,7 @@ package net.systemeD.potlatch2 {
         private var maximised:Boolean=false;
         private var maximiseFunction:String;
         private var minimiseFunction:String;
+        private var moveFunction:String;
 
 		[Embed(source="../../../embedded/pen.png")] 		public var pen:Class;
 		[Embed(source="../../../embedded/pen_x.png")] 		public var pen_x:Class;
@@ -40,7 +42,8 @@ package net.systemeD.potlatch2 {
 			this.toolbox.init(this);
             this.maximiseFunction = Connection.getParam("maximise_function", null);
             this.minimiseFunction = Connection.getParam("minimise_function", null);
-            
+            this.moveFunction = Connection.getParam("move_function", null);
+
             map.parent.addEventListener(MouseEvent.MOUSE_MOVE, mapMouseEvent);
             map.parent.addEventListener(MouseEvent.MOUSE_UP, mapMouseEvent);
             map.parent.addEventListener(MouseEvent.MOUSE_DOWN, mapMouseEvent);
@@ -48,6 +51,10 @@ package net.systemeD.potlatch2 {
             map.parent.addEventListener(MouseEvent.CLICK, mapMouseEvent);
             map.parent.addEventListener(KeyboardEvent.KEY_DOWN, keyDownHandler);
             map.parent.addEventListener(KeyboardEvent.KEY_UP, keyUpHandler);
+
+            if (this.moveFunction) {
+                map.addEventListener(MapEvent.MOVE, moveHandler);
+            }
         }
 
         public function setActive():void {
@@ -92,7 +99,7 @@ package net.systemeD.potlatch2 {
 		}
 
         private function mapMouseEvent(event:MouseEvent):void {
-            if (event.type!=MouseEvent.ROLL_OVER) map.stage.focus = map.parent;
+            if (isInteractionEvent(event)) map.stage.focus = map.parent;
             if (event.type==MouseEvent.MOUSE_UP && map.dragstate==map.DRAGGING) { return; }
             
             var mapLoc:Point = map.globalToLocal(new Point(event.stageX, event.stageY));
@@ -104,8 +111,7 @@ package net.systemeD.potlatch2 {
         }
         
         public function entityMouseEvent(event:MouseEvent, entity:Entity):void {
-            if (event.type!=MouseEvent.ROLL_OVER) map.stage.focus = map.parent;
-            //if ( event.type == MouseEvent.MOUSE_DOWN )
+            if (isInteractionEvent(event)) map.stage.focus = map.parent;
             event.stopPropagation();
                 
             var mapLoc:Point = map.globalToLocal(new Point(event.stageX, event.stageY));
@@ -115,7 +121,18 @@ package net.systemeD.potlatch2 {
             var newState:ControllerState = state.processMouseEvent(event, entity);
             setState(newState);
         }
-        
+
+		private function isInteractionEvent(event:MouseEvent):Boolean {
+			switch (event.type) {
+				case MouseEvent.ROLL_OUT:	return false;
+				case MouseEvent.ROLL_OVER:	return false;
+				case MouseEvent.MOUSE_OUT:	return false;
+				case MouseEvent.MOUSE_OVER:	return false;
+				case MouseEvent.MOUSE_MOVE:	return false;
+        	}
+			return true;
+		}
+
         public function setState(newState:ControllerState):void {
             if ( newState == state )
                 return;
@@ -160,6 +177,13 @@ package net.systemeD.potlatch2 {
                 maximised = true;
             }
         }
+
+		private function moveHandler(event:MapEvent):void {
+			ExternalInterface.call(this.moveFunction,
+                                   event.params.lon, event.params.lat, event.params.scale,
+                                   event.params.minlon, event.params.minlat,
+                                   event.params.maxlon, event.params.maxlat);
+		}
 
     }
     

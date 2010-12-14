@@ -131,32 +131,22 @@ package net.systemeD.potlatch2.collections {
 		public function onAttributionLoad(e:Event,bg: Object):void {
 			trace ("onAttributionLoad");
 			// if we ever need to cope with non-Microsoft attribution, then this should look at bg.scheme
-			// someone who actually likes XML can replace the following with the 'proper' way of doing it
-			var xmlnsPattern:RegExp = new RegExp("xmlns[^\"]*\"[^\"]*\"", "gi");
-			var xsiPattern:RegExp = new RegExp("xsi[^\"]*\"[^\"]*\"", "gi");
-			var s:String=e.target.data;
-			var xml:XML = new XML(s.replace(xmlnsPattern, "").replace(xsiPattern, ""));
+            default xml namespace = Namespace("http://schemas.microsoft.com/search/local/ws/rest/v1");
+            var xml:XML = new XML(e.target.data);
 			var attribution:Object = {};
-			for each (var ResourceSets:XML in xml.child("ResourceSets")) {
-				for each (var ResourceSet:XML in ResourceSets.child("ResourceSet")) {
-					for each (var Resources:XML in ResourceSet.child("Resources")) {
-						for each (var ImageryMetadata:XML in Resources.child("ImageryMetadata")) {
-							for each (var ImageryProvider:XML in ImageryMetadata.child("ImageryProvider")) {
-								var areas:Array=[];
-								for each (var CoverageArea:XML in ImageryProvider.child("CoverageArea")) {
-									areas.push([CoverageArea.ZoomMin,
-									            CoverageArea.ZoomMax,
-									            CoverageArea.BoundingBox.SouthLatitude,
-									            CoverageArea.BoundingBox.WestLongitude,
-									            CoverageArea.BoundingBox.NorthLatitude,
-									            CoverageArea.BoundingBox.EastLongitude]);
-								}
-								attribution[ImageryProvider.Attribution]=areas;
-							}
-						}
-					}
-				}
-			}
+            for each (var ImageryProvider:XML in xml..ImageryProvider) {
+                var areas:Array=[];
+                for each (var CoverageArea:XML in ImageryProvider.CoverageArea) {
+                    areas.push([CoverageArea.ZoomMin,
+                                CoverageArea.ZoomMax,
+                                CoverageArea.BoundingBox.SouthLatitude,
+                                CoverageArea.BoundingBox.WestLongitude,
+                                CoverageArea.BoundingBox.NorthLatitude,
+                                CoverageArea.BoundingBox.EastLongitude]);
+                }
+                attribution[ImageryProvider.Attribution]=areas;
+            }
+			default xml namespace = new Namespace("");
 			bg.attribution=attribution;
 			setAttribution();
 		}
@@ -185,6 +175,7 @@ package net.systemeD.potlatch2.collections {
 
 		private function moveHandler(event:MapEvent):void {
 			setAttribution();
+			dispatchEvent(new Event("collection_changed"));
 		}
 		private function setAttribution():void {
 			var tf:TextField=TextField(_overlay.getChildAt(0));
@@ -206,22 +197,27 @@ package net.systemeD.potlatch2.collections {
 			}
 			if (attr.length==0) return;
 			tf.text="Background "+attr.join(", ");
-			tf.x=_map.mapwidth  - 5 - tf.textWidth;
-			tf.y=_map.mapheight - 5 - tf.textHeight;
+			positionAttribution();
 			dispatchEvent(new MapEvent(MapEvent.BUMP, { y: tf.textHeight }));	// don't let the toolbox obscure it
 		}
-		private function resizeHandler(event:MapEvent):void {
-			if (!selected.logoData) return;
-			_overlay.getChildAt(2).y=event.params.height - 5 - selected.logoHeight - (selected.terms_url ? 10 : 0);
+		private function positionAttribution():void {
+			var tf:TextField=TextField(_overlay.getChildAt(0));
+			tf.x=_map.mapwidth  - 5 - tf.textWidth;
+			tf.y=_map.mapheight - 5 - tf.textHeight;
 		}
+
 		private function setLogo():void {
 			while (_overlay.numChildren>2) { _overlay.removeChildAt(2); }
 			if (!selected.logoData) return;
 			var logo:Sprite=new Sprite();
 			logo.addChild(new Bitmap(selected.logoData));
-			logo.x=5; logo.y=_map.mapheight - 5 - selected.logoHeight - (selected.terms_url ? 10 : 0);
 			if (selected.logo_url) { logo.buttonMode=true; logo.addEventListener(MouseEvent.CLICK, launchLogoLink, false, 0, true); }
 			_overlay.addChild(logo);
+			positionLogo();
+		}
+		private function positionLogo():void {
+			_overlay.getChildAt(2).x=5;
+			_overlay.getChildAt(2).y=_map.mapheight - 5 - selected.logoHeight - (selected.terms_url ? 10 : 0);
 		}
 		private function launchLogoLink(e:Event):void {
 			if (!selected.logo_url) return;
@@ -231,12 +227,22 @@ package net.systemeD.potlatch2.collections {
 			var terms:TextField=TextField(_overlay.getChildAt(1));
 			if (!selected.terms_url) { terms.text=''; return; }
 			terms.text="Background terms of use";
-			terms.x=5; terms.y=_map.mapheight - 15;
+			positionTerms();
 			terms.addEventListener(MouseEvent.CLICK, launchTermsLink, false, 0, true);
+		}
+		private function positionTerms():void {
+			_overlay.getChildAt(1).x=5;
+			_overlay.getChildAt(1).y=_map.mapheight - 15;
 		}
 		private function launchTermsLink(e:Event):void {
 			if (!selected.terms_url) return;
 			navigateToURL(new URLRequest(selected.terms_url), '_blank');
+		}
+
+		private function resizeHandler(event:MapEvent):void {
+			if (selected.logoData) positionLogo();
+			if (selected.terms_url) positionTerms();
+			if (selected.attribution) positionAttribution();
 		}
 
 		[Bindable(event="collection_changed")]

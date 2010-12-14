@@ -17,32 +17,35 @@ package net.systemeD.potlatch2.utils {
 		}
 
 		override protected function doImport(): void {
-			var xmlnsPattern:RegExp = new RegExp("xmlns[^\"]*\"[^\"]*\"", "gi");
-			var xsiPattern:RegExp = new RegExp("xsi[^\"]*\"[^\"]*\"", "gi");
-			files[0] = String(files[0]).replace(xmlnsPattern, "").replace(xsiPattern, "");
-			var file:XML=new XML(files[0]);
-
-			for each (var trk:XML in file.child("trk")) {
-				for each (var trkseg:XML in trk.child("trkseg")) {
-					var way:Way;
-					var nodestring:Array=[];
-					for each (var trkpt:XML in trkseg.child("trkpt")) {
-						nodestring.push(container.createNode({}, trkpt.@lat, trkpt.@lon));
-					}
-					if (nodestring.length>0) {
-						way=container.createWay({}, nodestring);
-						if (simplify) { Simplify.simplify(way, paint.map, false); }
-					}
+			var file:XML = new XML(files[0]);
+			for each (var ns:Namespace in file.namespaceDeclarations()) {
+				if (ns.uri.match(/^http:\/\/www\.topografix\.com\/GPX\/1\/[01]$/)) {
+					default xml namespace = ns;
 				}
 			}
-			for each (var wpt:XML in file.child("wpt")) {
-				var tags:Object={};
-				for each (var tag:XML in wpt.children()) {
-					tags[tag.name()]=tag.toString();
+
+			for each (var trkseg:XML in file..trkseg) {
+				var way:Way;
+                var nodestring:Array = [];
+                for each (var trkpt:XML in trkseg.trkpt) {
+					nodestring.push(container.createNode({}, trkpt.@lat, trkpt.@lon));
 				}
-				var node:Node=container.createNode(tags, wpt.@lat, wpt.@lon);
+                if (nodestring.length > 0) {
+					way = container.createWay({}, nodestring);
+					if (simplify) { Simplify.simplify(way, paint.map, false); }
+				}
+			}
+
+            for each (var wpt:XML in file.wpt) {
+				var tags:Object = {};
+				for each (var tag:XML in wpt.children()) {
+					tags[tag.name().localName]=tag.toString();
+				}
+				var node:Node = container.createNode(tags, wpt.@lat, wpt.@lon);
 				container.registerPOI(node);
 			}
+
+			default xml namespace = new Namespace("");
 		}
 	}
 }

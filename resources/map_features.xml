@@ -109,9 +109,7 @@ Quick documentation:
   </inputSet>
 
   <inputSet id="source">
-    <!-- Can you do a combined freetext/dropdown? -->
-    <!-- Also need to make sure every object gets this -->
-    <input type="freetext" category="Misc" presence="always" name="Source" key="source" description="The primary source of information for this object (GPS, survey, Yahoo, nearmap...)" priority="high"/>
+    <input type="freetext" category="Misc" presence="onTagMatch" name="Source" key="source" description="The primary source of information for this object (GPS, survey, Yahoo, ...)" priority="lowest"/>
   </inputSet>
 
   <inputSet id="common">
@@ -238,6 +236,8 @@ Quick documentation:
     <inputSet ref="bridge"/>
     <inputSet ref="tunnel"/>
     <inputSet ref="embankment-cutting"/>
+    <!-- not sure which category best suits put area=yes -->
+    <input type="checkbox" presence="onTagMatch" category="Restrictions" key="area" name="Open area" description="The way is a large open space, like at a dock, where vehicles can move anywhere within the space, rather than just along the edge." />
   </inputSet>
 
   <inputSet id="roadLanes">
@@ -452,11 +452,11 @@ Quick documentation:
         name="Bike lanes" category="Cycle" description="Road has bike lanes within the road surface"
         key="cycleway" layout="horizontal">
       <choice value="no" text="No bike lanes"/>
-      <choice value="opposite" text="No, but two-way bicycle traffic permitted" description="The route may be cycled in the direction opposite of other traffic, but does not have a dedicated lane. Common in Belgium, Netherlands, Denmark."/>
-      <choice value="lane" text="Standard bike lane" description="Separated by painted line"/>
-      <choice value="track" text="Copenhagen-style bike lane" description="Separated by kerb or parked cars"/>
-      <choice value="opposite_lane" text="Two-way bike lane" description="Separated by painted line, and allowing bicycles in both directions in an otherwise one-way street."/>
-      <choice value="opposite_track" text="Two-way Copenhagen-style bike lane" description="Separated by kerb or parked cars, and allowing bicycles in both directions in an otherwise one-way street."/>
+      <choice value="lane" text="On-road bike lane" description="Separated by painted line"/>
+      <choice value="track" text="Parallel track" description="Separated by kerb or parked cars"/>
+      <choice value="opposite_lane" text="Contraflow lane" description="Separated by painted line, and allowing bicycles in both directions in an otherwise one-way street."/>
+      <choice value="opposite_track" text="Contraflow track" description="Separated by kerb or parked cars, and allowing bicycles in both directions in an otherwise one-way street."/>
+      <choice value="opposite" text="Contraflow unmarked" description="The route may be cycled in the direction opposite of other traffic, but does not have a dedicated lane."/>
       <help>http://wiki.openstreetmap.org/wiki/Key:cycleway</help>
     </input>
   </inputSet>
@@ -831,7 +831,7 @@ Quick documentation:
     <inputSet ref="common"/>
   </feature>
 
-  <feature name="Pedestrian Street">
+  <feature name="Pedestrian street">
     <category>paths</category>
     <icon image="features/paths__pedestrian.png">
       <font size="14pt">
@@ -1043,7 +1043,7 @@ Quick documentation:
 
   <feature name="Drain">
     <category>water</category>
-    <icon image="features/pois/water_generic.24.png">
+    <icon image="features/waterway__drain.png">
       <font size="14pt"><b>${name}</b></font>
     </icon>
 
@@ -1129,7 +1129,7 @@ Quick documentation:
 
   <feature name="Weir">
     <category>water</category>
-    <icon image="features/pois/water_generic.24.png">
+    <icon image="features/waterway__weir.png">
       <font size="14pt">
         <b>${name}</b>
       </font>
@@ -1177,15 +1177,27 @@ Quick documentation:
 
   <feature name="Slipway">
     <category>water</category>
-    <icon image="features/pois/water_generic.24.png"/>
+    <icon image="features/waterway__slipway.png" />
     <line/>
     <tag k="leisure" v="slipway"/>
     <inputSet ref="names"/>
     <inputSet ref="common"/>
   </feature>
 
+  <feature name="Slipway">
+    <category>water</category>
+    <point />
+    <tag k="leisure" v="slipway"/>
+    <inputSet ref="names"/>
+    <inputSet ref="common"/>
+  </feature>
 
-  <area/>
+  <feature name="Coastline">
+    <category>water</category>
+    <line/>
+    <tag k="natural" v="coastline"/>
+    <inputSet ref="common"/>
+  </feature>
 
   <!-- ************************************************************************
        Transport
@@ -1662,7 +1674,7 @@ Quick documentation:
        Landuse
        ************************************************************************ -->
 
-  <feature name="Industry">
+  <feature name="Industrial Area">
     <category>landuse</category>
     <area/>
     <icon image="features/pois/building_generic.png">
@@ -1685,7 +1697,7 @@ Quick documentation:
     <inputSet ref="common"/>
   </feature>
 
-  <feature name="Residential">
+  <feature name="Residential Area">
     <category>landuse</category>
     <area/>
     <icon image="features/pois/building_generic.png">
@@ -1696,13 +1708,24 @@ Quick documentation:
     <inputSet ref="common"/>
   </feature>
 
-  <feature name="Retail">
+  <feature name="Retail Area">
     <category>landuse</category>
     <area/>
     <icon image="features/pois/building_generic.png">
       <b>${name}</b>
     </icon>
     <tag k="landuse" v="retail"/>
+    <inputSet ref="simpleName"/>
+    <inputSet ref="common"/>
+  </feature>
+
+  <feature name="Construction Site">
+    <category>landuse</category>
+    <area/>
+    <icon image="features/pois/building_generic.png">
+      <b>${name}</b>
+    </icon>
+    <tag k="landuse" v="construction"/>
     <inputSet ref="simpleName"/>
     <inputSet ref="common"/>
   </feature>
@@ -2164,6 +2187,13 @@ Quick documentation:
     <inputSet ref="common"/>
   </feature>
 
+  <feature name="Toilets">
+    <category>amenity</category>
+    <point/>
+    <tag k="amenity" v="toilets"/>
+    <inputSet ref="common"/>
+  </feature>
+
 
   <!-- ========= Accommodation ========= -->
   <!-- Split off from tourism by Steve Bennett, can be remerged if it doesn't work out. -->
@@ -2437,8 +2467,6 @@ Quick documentation:
     <tag k="tourism" v="theme_park"/>
     <inputSet ref="common"/>
   </feature>
-
-
 
   <!-- ========= Transport ========= -->
 
@@ -2744,6 +2772,14 @@ Quick documentation:
     <help>http://wiki.openstreetmap.org/wiki/Tag:highway%3Dturning_circle</help>
     <point/>
     <tag k="highway" v="turning_circle"/>
+    <inputSet ref="common"/>
+  </feature>
+
+  <feature name="Mini Roundabout">
+    <category>transport</category>
+    <help>http://wiki.openstreetmap.org/wiki/Tag:highway%3Dmini_roundabout</help>
+    <point/>
+    <tag k="highway" v="mini_roundabout"/>
     <inputSet ref="common"/>
   </feature>
 
@@ -3190,6 +3226,15 @@ Quick documentation:
     <inputSet ref="common"/>
   </feature>
 
+  <!-- boundaries -->
+
+  <feature name="Administrative Boundary">
+    <category>places</category>
+    <line/>
+    <help>http://wiki.openstreetmap.org/wiki/Tag:boundary=administrative</help>
+    <tag k="boundary" v="administrative"/>
+    <input type="number" minimum="2" maximum="10" presence="always" name="Admin Level" key="admin_level" description="The Administrative level" />
+  </feature>
 
   <!-- ************************************************************************
        Relations
