@@ -8,6 +8,12 @@ package net.systemeD.potlatch2.controller {
     import net.systemeD.potlatch2.EditController;
 	import net.systemeD.halcyon.Globals;
 	import net.systemeD.potlatch2.save.SaveManager;
+	import flash.ui.Keyboard;
+    /** Represents a particular state of the controller, such as "dragging a way" or "nothing selected". Key methods are 
+    * processKeyboardEvent and processMouseEvent which take some action, and return a new state for the controller. 
+    * 
+    * This abstract class has some behaviour that applies in most states, and lots of 'null' behaviour. 
+    * */
     public class ControllerState {
 
         protected var controller:EditController;
@@ -30,10 +36,12 @@ package net.systemeD.potlatch2.controller {
 			return true;
 		}
 
+        /** When triggered by a mouse action such as a click, perform an action on the given entity, then move to a new state. */
         public function processMouseEvent(event:MouseEvent, entity:Entity):ControllerState {
             return this;
         }
-
+		
+		/** When triggered by a keypress, perform an action on the given entity, then move to a new state. */
         public function processKeyboardEvent(event:KeyboardEvent):ControllerState {
             return this;
         }
@@ -45,10 +53,11 @@ package net.systemeD.potlatch2.controller {
         public function enterState():void {}
         public function exitState(newState:ControllerState):void {}
 
+		/** Represent the state in text for debugging. */
 		public function toString():String {
 			return "(No state)";
 		}
-
+		/** Default behaviour for the current state that should be called if state-specific action has been taken care of or ruled out. */
 		protected function sharedKeyboardEvents(event:KeyboardEvent):ControllerState {
 			switch (event.keyCode) {
 				case 66:	setSourceTag(); break;													// B - set source tag for current object
@@ -57,12 +66,14 @@ package net.systemeD.potlatch2.controller {
 				case 83:	SaveManager.saveChanges(); break;										// S - save
 				case 84:	controller.tagViewer.togglePanel(); return null;						// T - toggle tags panel
 				case 90:	MainUndoStack.getGlobalStack().undo(); return null;						// Z - undo
-				case 187:	controller.tagViewer.addNewTag(); return null;							// + - add tag
-				case 107:       controller.tagViewer.addNewTag(); return null;							// numpad + - add tag
+				case Keyboard.NUMPAD_ADD:															// + - add tag
+				case 187:	controller.tagViewer.selectAdvancedPanel();								//   |
+							controller.tagViewer.addNewTag(); return null;							//   |
 			}
 			return null;
 		}
 
+		/** Default behaviour for the current state that should be called if state-specific action has been taken care of or ruled out. */
 		protected function sharedMouseEvents(event:MouseEvent, entity:Entity):ControllerState {
 			var paint:MapPaint = getMapPaint(DisplayObject(event.target));
             var focus:Entity = getTopLevelFocusEntity(entity);
@@ -81,21 +92,19 @@ package net.systemeD.potlatch2.controller {
 			}
 
 			if ( event.type == MouseEvent.MOUSE_DOWN ) {
-				if ( entity is Way ) {
-					// click way
-					return new DragWay(focus as Way, event);
-				} else if ( focus is Node ) {
-					// select POI node
-					return new DragPOINode(entity as Node,event,false);
-				} else if ( entity is Node && selectedWay && entity.hasParent(selectedWay) ) {
+				if ( entity is Node && selectedWay && entity.hasParent(selectedWay) ) {
 					// select node within this way
                 	return new DragWayNode(selectedWay,  getNodeIndex(selectedWay,entity as Node),  event, false);
 				} else if ( entity is Node && focus is Way ) {
 					// select way node
 					return new DragWayNode(focus as Way, getNodeIndex(focus as Way,entity as Node), event, false);
-				} else if ( controller.keyDown(32) ) {
-					// drag map
+				} else if ( controller.keyDown(Keyboard.SPACE) ) {
+					// drag the background imagery to compensate for poor alignment
 					return new DragBackground(event);
+				} else if (entity && selection.indexOf(entity)>-1) {
+					return new DragSelection(selection, event);
+				} else if (entity) {
+					return new DragSelection([entity], event);
 				}
             } else if ( event.type == MouseEvent.CLICK && focus == null && map.dragstate!=map.DRAGGING && this is SelectedMarker) {
                 // this is identical to the below, but needed for unselecting markers on vector background layers.
@@ -125,6 +134,7 @@ package net.systemeD.potlatch2.controller {
 			return null;
 		}
 
+		/** Gets the way that the selected node is part of, if that makes sense. If not, return the node, or the way, or nothing. */
 		public static function getTopLevelFocusEntity(entity:Entity):Entity {
 			if ( entity is Node ) {
 				for each (var parent:Entity in entity.parentWays) {
@@ -138,6 +148,7 @@ package net.systemeD.potlatch2.controller {
 			}
 		}
 
+		/** Find the MapPaint object that this DisplayObject belongs to. */
 		protected function getMapPaint(d:DisplayObject):MapPaint {
 			while (d) {
 				if (d is MapPaint) { return MapPaint(d); }
@@ -153,6 +164,7 @@ package net.systemeD.potlatch2.controller {
 			return null;
 		}
 
+		/** Create a "repeat tags" action on the current entity, if possible. */
 		protected function repeatTags(object:Entity):void {
 			if (!controller.clipboards[object.getType()]) { return; }
 			object.suspend();
@@ -168,6 +180,7 @@ package net.systemeD.potlatch2.controller {
 
 		}
 
+		/** Create an action to add "source=*" tag to current entity based on background imagery. This is a convenient shorthand for users. */
 		protected function setSourceTag():void {
 			if (selectCount!=1) { return; }
 			if (Imagery.instance().selected && Imagery.instance().selected.sourcetag) {
@@ -204,6 +217,14 @@ package net.systemeD.potlatch2.controller {
 			return selectedWays;
 		}
 
+        public function get selectedNodes():Array {
+            var selectedNodes:Array=[];
+            for each (var item:Entity in _selection) {
+                if (item is Node) { selectedNodes.push(item); }
+            }
+            return selectedNodes;
+        }
+
 		public function hasSelectedWays():Boolean {
 			for each (var item:Entity in _selection) {
 				if (item is Way) { return true; }
@@ -224,6 +245,19 @@ package net.systemeD.potlatch2.controller {
 			}
 			return false;
 		}
+
+        /** Determine whether or not any nodes are selected, and if so whether any of them belong to areas. */
+        public function hasSelectedWayNodesInAreas():Boolean {
+            for each (var item:Entity in _selection) {
+                if (item is Node) {
+                    var parentWays:Array = Node(item).parentWays;
+                    for each (var way:Entity in parentWays) {
+                        if (Way(way).isArea()) { return true; }
+                    }
+                }
+            }
+            return false;
+        }
 
 		public function hasAdjoiningWays():Boolean {
 			if (_selection.length<2) { return false; }

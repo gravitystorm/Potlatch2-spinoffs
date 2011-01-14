@@ -50,7 +50,7 @@
 			click='doQuadrilateralise();' 
 			enabled="{canDo('quadrilateralise')}" 
 			alpha="{getAlpha('quadrilateralise')}" 
-			toolTip="Make right-angled" 
+			toolTip="Make right-angled (Q)" 
 			width="24" height="24" />
 		<mx:Button icon="@Embed('../../../embedded/parallel.svg')" 
 			click='doParallelise();' 
@@ -116,7 +116,7 @@
 			switch (op) {
 				case 'delete':				return true;
 				case 'reverseDirection':	return controller.state.hasSelectedWays();
-				case 'quadrilateralise':	return controller.state.hasSelectedAreas();
+				case 'quadrilateralise':	return (controller.state.hasSelectedAreas() || controller.state.hasSelectedWayNodesInAreas());
 				case 'straighten':			return controller.state.hasSelectedUnclosedWays();
 				case 'circularise':			return controller.state.hasSelectedAreas();
 				case 'split':				return (controller.state is SelectedWayNode);
@@ -222,6 +222,11 @@
 			for each (var way:Way in controller.state.selectedWays) {
 				Quadrilateralise.quadrilateralise(way, undo.push);
 			}
+            for each (var node:Node in controller.state.selectedNodes) {
+                for each (var parentWay:Way in node.parentWays) {
+                  Quadrilateralise.quadrilateralise(parentWay, undo.push);
+                }
+            }
 			MainUndoStack.getGlobalStack().addAction(undo);
 		}
 

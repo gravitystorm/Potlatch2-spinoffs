@@ -2,7 +2,7 @@
 	AutoComplete component
 	based on Adobe original but heavily bug-fixed and stripped down
 	http://www.adobe.com/cfusion/exchange/index.cfm?event=extensionDetail&extid=1047291
-	
+
 	Enhancements to do:
 	- up/down when field empty should show everything
 	- up (to 0) when dropdown displayed should cause it to reset to previous typed value
@@ -184,14 +184,15 @@ package net.systemeD.controls {
 						dropdownClosed=true;
 						showDropdown=false;
 						showingDropdown=false;
+						selectedIndex=-1;		// nothing selected
 					} else {
 						// show dropdown
 						showDropdown = true;
-						selectedIndex = 0;
+						selectedIndex = 0;		// first item selected
 					}
 				}
 			} else {
-				selectedIndex=-1
+				selectedIndex=-1;
 			}
 		}
 		
@@ -204,7 +205,7 @@ package net.systemeD.controls {
 				// not in menu
 				// trace("not in menu"); trace("- restoring to "+typedText);
 				textInput.text = typedText;
-				textInput.setSelection(textInput.text.length, textInput.text.length);
+				textInput.setSelection(cursorPosition, cursorPosition);
 			} else if (dropdown && typedTextChanged && textInput.text!=typedText) {
 				// in menu, but user has typed
 				// trace("in menu, but user has typed"); trace("- restoring to "+typedText);
@@ -215,6 +216,7 @@ package net.systemeD.controls {
 				// trace("should force update");
 				textInput.htmlText=selectedLabel;
 				textInput.validateNow();
+				if (typedTextChanged) textInput.setSelection(cursorPosition, cursorPosition);
 			} else if (showingDropdown && textInput.text!=selectedLabel && !typedTextChanged) {
 				// in menu, user has navigated with cursor keys/mouse
 				// trace("in menu, user has navigated with cursor keys/mouse");

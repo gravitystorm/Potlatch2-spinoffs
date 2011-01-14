@@ -8,23 +8,43 @@ package net.systemeD.halcyon {
 	import net.systemeD.halcyon.styleparser.RuleSet;
 	import net.systemeD.halcyon.Globals;
 
+	/** Manages the drawing of map entities, allocating their sprites etc. */
 	public class MapPaint extends Sprite {
-
+		
+		/** Access Map object */
 		public var map:Map;
+		/** Entities on layers below minlayer will not be shown by this paint object. (Confirm?) */
 		public var minlayer:int;
+		/** Entities on layers above maxlayer will not be shown by this paint object. (Confirm?) */
 		public var maxlayer:int;
-		public var ruleset:RuleSet;						// rules
+		/** The MapCSS rules used for drawing entities. */
+		public var ruleset:RuleSet;						
+		/** WayUI objects attached to Way entities that are currently visible. */
 		public var wayuis:Object=new Object();			// sprites for ways and (POI/tagged) nodes
-		public var nodeuis:Object=new Object();			//	|
+		/** NodeUI objects attached to POI/tagged node entities that are currently visible. */
+		// confirm this - it seems to me all nodes in ways get nodeuis? --Steve B
+		public var nodeuis:Object=new Object();
+		/** MarkerUI objects attached to Marker entities that are currently visible. */
         public var markeruis:Object=new Object();
-		public var isBackground:Boolean = true;			// is it a background layer or the core paint object?
-		public var sublayerIndex:Object={};				// hash of index->position
+        /** Is this a background layer or the core paint object? */
+		public var isBackground:Boolean = true;
+		/** Hash of index->position */
+		public var sublayerIndex:Object={};
 
 		private const VERYBIG:Number=Math.pow(2,16);
 		private static const NO_LAYER:int=-99999;		// same as NodeUI
 
 		// Set up layering
 
+		/** Creates paint sprites and hit sprites for all layers in range. This object ends up with a series of child sprites
+		 * as follows: p0,p1,p2..px, h0,h1,h2..hx where p are "paint sprites" and "h" are "hit sprites". There is one of each type for each layer.
+		 * <p>Each paint sprite has 4 child sprites (fill, casing, stroke, names). Each hit sprite has 2 child sprites (way hit tests, node hit tests).</p>  
+		 * <p>Thus if layers range from -5 to +5, there will be 11 top level paint sprites followed by 11 top level hit sprites.</p>
+		 * 
+		 * @param map The map to be rendered.
+		 * @param minlayer The lowest layer in that map that will be rendered.
+		 * @param maxlayer The top layer in that map that will be rendered.
+		 * */ 
 		public function MapPaint(map:Map,minlayer:int,maxlayer:int) {
 			mouseEnabled=false;
 
@@ -55,14 +75,17 @@ package net.systemeD.halcyon {
 			}
 		}
 		
+		/** Returns the paint surface for the given layer. */
 		public function getPaintSpriteAt(l:int):Sprite {
 			return getChildAt(l-minlayer) as Sprite;
 		}
 
+		/** Returns the hit sprite for the given layer. */
 		public function getHitSpriteAt(l:int):Sprite {
 			return getChildAt((l-minlayer) + (maxlayer-minlayer+1)) as Sprite;
 		}
 		
+		/** Is ruleset loaded? */
 		public function get ready():Boolean {
 			if (!ruleset) { return false; }
 			if (!ruleset.loaded) { return false; }
@@ -123,6 +146,8 @@ package net.systemeD.halcyon {
         * @param redraw If true, all UIs for entities on "inside" lists will be redrawn
         * @param remove If true, all UIs for entites on "outside" lists will be removed. The purgable flag on UIs
                         can override this, for example for selected objects.
+        * fixme? add smarter behaviour for way nodes - remove NodeUIs from way nodes off screen, create them for ones
+        * that scroll onto screen (for highlights etc)
         */
 		public function updateEntityUIs(o:Object, redraw:Boolean, remove:Boolean):void {
 			var way:Way, poi:Node, marker:Marker;
@@ -130,6 +155,7 @@ package net.systemeD.halcyon {
 			for each (way in o.waysInside) {
 				if (!wayuis[way.id]) { createWayUI(way); }
 				else if (redraw) { wayuis[way.id].recalculate(); wayuis[way.id].redraw(); }
+				else wayuis[way.id].updateHighlights();//dubious
 			}
 
 			if (remove) {
@@ -173,6 +199,7 @@ package net.systemeD.halcyon {
             }
 		}
 
+		/** Make a UI object representing a way. */
 		public function createWayUI(way:Way):WayUI {
 			if (!wayuis[way.id]) {
 				wayuis[way.id]=new WayUI(way,this);
@@ -181,10 +208,12 @@ package net.systemeD.halcyon {
 			return wayuis[way.id];
 		}
 
+		/** Respond to event by removing the WayUI. */
 		public function wayDeleted(event:EntityEvent):void {
 			deleteWayUI(event.entity as Way);
 		}
 
+		/** Remove a way's UI object. */
 		public function deleteWayUI(way:Way):void {
 			way.removeEventListener(Connection.WAY_DELETED, wayDeleted);
 			if (wayuis[way.id]) {
@@ -199,6 +228,7 @@ package net.systemeD.halcyon {
 			}
 		}
 
+		/** Make a UI object representing a node. */
 		public function createNodeUI(node:Node,rotation:Number=0,layer:int=NO_LAYER,stateClasses:Object=null):NodeUI {
 			if (!nodeuis[node.id]) {
 				nodeuis[node.id]=new NodeUI(node,this,rotation,layer,stateClasses);
@@ -212,10 +242,12 @@ package net.systemeD.halcyon {
 			return nodeuis[node.id];
 		}
 
+		/** Respond to event by deleting NodeUI. */
 		public function nodeDeleted(event:EntityEvent):void {
 			deleteNodeUI(event.entity as Node);
 		}
 
+		/** Remove a node's UI object. */
 		public function deleteNodeUI(node:Node):void {
 			if (!nodeuis[node.id]) { return; }
 			node.removeEventListener(Connection.NODE_DELETED, nodeDeleted);
@@ -224,6 +256,7 @@ package net.systemeD.halcyon {
 			delete nodeuis[node.id];
 		}
 
+        /** Make a UI object representing a marker. */
         public function createMarkerUI(marker:Marker,rotation:Number=0,layer:int=NO_LAYER,stateClasses:Object=null):MarkerUI {
             if (!markeruis[marker.id]) {
                 markeruis[marker.id]=new MarkerUI(marker,this,rotation,layer,stateClasses);
@@ -237,10 +270,12 @@ package net.systemeD.halcyon {
             return markeruis[marker.id];
         }
 
+        /** Respond to event by deleting MarkerUI. */
         public function markerDeleted(event:EntityEvent):void {
             deleteMarkerUI(event.entity as Marker);
         }
 
+        /** Remove a marker's UI object. */
         public function deleteMarkerUI(marker:Marker):void {
             if (!markeruis[marker.id]) { return; }
             marker.removeEventListener(Connection.NODE_DELETED, markerDeleted);
@@ -261,6 +296,7 @@ package net.systemeD.halcyon {
 			delete nodeuis[oldID];
 		}
 
+		/** Make a new sprite for painting on */
 		private function getPaintSprite():Sprite {
 			var s:Sprite = new Sprite();
 			s.mouseEnabled = false;
@@ -280,6 +316,7 @@ package net.systemeD.halcyon {
             for each (var m:MarkerUI in markeruis) { m.invalidateStyleList(); m.redraw(); }
 		}
 
+		/** Redraw nodes and markers */
 		public function redrawPOIs():void {
 			for each (var p:NodeUI in nodeuis) { p.invalidateStyleList(); p.redraw(); }
             for each (var m:MarkerUI in markeruis) { m.invalidateStyleList(); m.redraw(); }
