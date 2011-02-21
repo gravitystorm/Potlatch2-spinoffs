@@ -2,10 +2,11 @@ package net.systemeD.halcyon.connection {
 
     import flash.events.EventDispatcher;
     import flash.utils.Dictionary;
-
+    
     import net.systemeD.halcyon.connection.actions.*;
 
-    /** An Entity is an object stored in the map database, and therefore uploaded and downloaded. This includes Nodes, Ways, Relations but also Changesets etc. */
+    /** An Entity is an object stored in the map database, and therefore uploaded and downloaded. This includes Nodes, Ways, 
+    *   Relations but also Changesets etc. */
     public class Entity extends EventDispatcher {
         private var _id:Number;
         private var _version:uint;
@@ -31,7 +32,7 @@ package net.systemeD.halcyon.connection {
             modified = id < 0;
         }
 
-        /** ID for the entity. */
+        /** OSM ID. */
         public function get id():Number {
             return _id;
         }
@@ -41,16 +42,22 @@ package net.systemeD.halcyon.connection {
             return _version;
         }
 
-        /** User identifier associated with the entity. (?) */
+        /** User ID who last edited this entity (from OSM API). */
         public function get uid():Number {
             return _uid;
         }
 
+		/** Is entity fully loaded, or is it just a placeholder reference (as a relation member)? */
         public function get loaded():Boolean {
             return _loaded;
         }
 
-        /** Most recent modification of the entity. */
+		/** List of entities. Overridden by EntityCollection. */
+		public function get entities():Array {
+			return [this];
+		}
+
+        /** Most recent modification of the entity (from OSM API). */
         public function get timestamp():String {
             return _timestamp;
         }
@@ -383,6 +390,38 @@ package net.systemeD.halcyon.connection {
         public function getType():String {
             return '';
         }
+
+		/** Compare type against supplied string */
+		public function isType(str:String):Boolean {
+			return getType()==str;
+		}
+		
+        /** Copy tags from another entity into this one, creating "key=value1; value2" pairs if necessary.
+        * * @return Array of keys that require manual merging, in order to warn the user. */ 
+        public function mergeTags(source: Entity, performAction:Function):Array {
+            var sourcetags:Object = source.getTagsHash();
+            var problem_keys:Array=new Array(); 
+            for (var k:String in sourcetags) {
+                var v1:String = tags[k];
+                var v2:String = sourcetags[k];
+                if ( v1 && v1 != v2) {
+                    // This can create broken tags (does anything support "highway=residential; tertiary"?). 
+                    // Probably better to do something like:
+                    // highway=residential
+                    // highway:tomerge=tertiary
+                    
+                    setTag(k, v1+"; "+v2, performAction);
+                    problem_keys.push(k);
+                } else {
+                    setTag(k, v2, performAction);
+                }
+            }
+            if (problem_keys.length > 0)
+                return problem_keys;
+            else 
+                return null;
+        }
+
 
     }
 

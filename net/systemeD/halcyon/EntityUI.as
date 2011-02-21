@@ -4,9 +4,7 @@ package net.systemeD.halcyon {
 	import flash.events.MouseEvent;
 	import flash.text.AntiAliasType;
 	import flash.text.GridFitType;
-	import net.systemeD.halcyon.Globals;
 	import net.systemeD.halcyon.styleparser.StyleList;
-	import net.systemeD.halcyon.styleparser.RuleSet;
     import net.systemeD.halcyon.connection.*;
 
 	/** Parent class of representations of map Entities, with properties about how they should be drawn. */ 
@@ -34,8 +32,6 @@ package net.systemeD.halcyon {
 		protected var clearLimit:uint=0;
 		/** Reference to parent MapPaint */
 		public var paint:MapPaint;	
-		/** Reference to ruleset (MapCSS) in operation */
-		public var ruleset:RuleSet;
 		/** Does object respond to clicks? */
 		public var interactive:Boolean=true;
 		/** Can it be deleted when offscreen? */
@@ -58,18 +54,18 @@ package net.systemeD.halcyon {
 		public function EntityUI(entity:Entity, paint:MapPaint) {
 			this.entity=entity;
 			this.paint=paint;
-            entity.addEventListener(Connection.TAG_CHANGED, tagChanged);
-			entity.addEventListener(Connection.ADDED_TO_RELATION, relationAdded);
-			entity.addEventListener(Connection.REMOVED_FROM_RELATION, relationRemoved);
-			entity.addEventListener(Connection.SUSPEND_REDRAW, suspendRedraw);
-			entity.addEventListener(Connection.RESUME_REDRAW, resumeRedraw);
-			listenSprite.addEventListener(MouseEvent.CLICK, mouseEvent);
-			listenSprite.addEventListener(MouseEvent.DOUBLE_CLICK, mouseEvent);
-			listenSprite.addEventListener(MouseEvent.ROLL_OVER, mouseEvent);
-			listenSprite.addEventListener(MouseEvent.MOUSE_OUT, mouseEvent);
-			listenSprite.addEventListener(MouseEvent.MOUSE_DOWN, mouseEvent);
-			listenSprite.addEventListener(MouseEvent.MOUSE_UP, mouseEvent);
-			listenSprite.addEventListener(MouseEvent.MOUSE_MOVE, mouseEvent);
+            entity.addEventListener(Connection.TAG_CHANGED, tagChanged, false, 0, true);
+			entity.addEventListener(Connection.ADDED_TO_RELATION, relationAdded, false, 0, true);
+			entity.addEventListener(Connection.REMOVED_FROM_RELATION, relationRemoved, false, 0, true);
+			entity.addEventListener(Connection.SUSPEND_REDRAW, suspendRedraw, false, 0, true);
+			entity.addEventListener(Connection.RESUME_REDRAW, resumeRedraw, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.CLICK, mouseEvent, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.DOUBLE_CLICK, mouseEvent, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.ROLL_OVER, mouseEvent, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.MOUSE_OUT, mouseEvent, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.MOUSE_DOWN, mouseEvent, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.MOUSE_UP, mouseEvent, false, 0, true);
+			listenSprite.addEventListener(MouseEvent.MOUSE_MOVE, mouseEvent, false, 0, true);
 		}
 
 		/** Remove the default event listeners. */
@@ -94,12 +90,19 @@ package net.systemeD.halcyon {
 		protected function attachRelationListeners():void {
 		    var relations:Array = entity.parentRelations;
             for each(var relation:Relation in relations ) {
-                relation.addEventListener(Connection.TAG_CHANGED, relationTagChanged);
+                relation.addEventListener(Connection.TAG_CHANGED, relationTagChanged, false, 0, true);
+            }
+		}
+
+		protected function removeRelationListeners():void {
+			var relations:Array = entity.parentRelations;
+            for each(var relation:Relation in relations) {
+                relation.removeEventListener(Connection.TAG_CHANGED, relationTagChanged);
             }
 		}
 
 		protected function relationAdded(event:RelationMemberEvent):void {
-		    event.relation.addEventListener(Connection.TAG_CHANGED, relationTagChanged);
+		    event.relation.addEventListener(Connection.TAG_CHANGED, relationTagChanged, false, 0, true);
 			invalidateStyleList();
 		    redraw();
 		}

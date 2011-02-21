@@ -1,12 +1,13 @@
 package net.systemeD.potlatch2.mapfeatures {
 
-    import flash.events.EventDispatcher;
     import flash.events.Event;
+    import flash.events.EventDispatcher;
     import flash.net.*;
     import flash.utils.ByteArray;
+    
     import mx.core.BitmapAsset;
     import mx.graphics.codec.PNGEncoder;
-
+    
     import net.systemeD.halcyon.connection.Entity;
     import net.systemeD.potlatch2.utils.CachedDataLoader;
 
@@ -26,6 +27,7 @@ package net.systemeD.potlatch2.mapfeatures {
         public var missingIconCls:Class;
 
 
+        /** Create this Feature from an XML subtree. */
         public function Feature(mapFeatures:MapFeatures, _xml:XML) {
             this.mapFeatures = mapFeatures;
             this._xml = _xml;
@@ -39,7 +41,7 @@ package net.systemeD.potlatch2.mapfeatures {
 
 			// parse tags
             for each(var tag:XML in definition.tag) {
-                _tags.push( { k:String(tag.@k), v:String(tag.@v)} );
+                _tags.push( { k:String(tag.@k), v:String(tag.@v), vmatch:String(tag.@vmatch)} );
             }
 
 			// parse 'within'
@@ -79,6 +81,7 @@ package net.systemeD.potlatch2.mapfeatures {
             var inputType:String = inputXML.@type;
             var presenceStr:String = inputXML.@presence;
             var sortOrderStr:String = inputXML.@priority;
+//          _tags.push( { k:String(inputXML.@key) } ); /* add the key to tags so that e.g. addr:housenumber shows up on autocomplete */
             var editor:EditorFactory = EditorFactory.createFactory(inputType, inputXML);
             if ( editor != null ) {
                 editor.presence = Presence.getPresence(presenceStr);
@@ -98,21 +101,48 @@ package net.systemeD.potlatch2.mapfeatures {
         }
 
         [Bindable(event="nameChanged")]
-        /** The human-readable name of the feature, or null if none. */
+        /** The human-readable name of the feature (@name), or null if none. */
         public function get name():String {
 			if (_xml.attribute('name').length()>0) { return _xml.@name; }
 			return null;
         }
 
+        [Bindable(event="descriptionChanged")]
+        /** The human-readable description of the feature, or null if none. */
+        public function get description():String {
+            var desc:XMLList = _xml.description
+            if (desc.length()>0) { return desc[0]; }
+            return null;
+        }
+
+        /** Returns the icon defined for the feature.
+        * This uses the "image" property of the feature's icon element. If no image property is defined, returns a default "missing icon".
+        */
         [Bindable(event="imageChanged")]
-        /** An icon for the feature. If none is defined, return default "missing icon". */
         public function get image():ByteArray {
+            return getImage();
+        }
+
+        /** Returns the drag+drop override-icon defined for the feature.
+        * This uses the "dnd" property of the feature's icon element, or if there is no override-icon it falls back to the standard image.
+        */
+        [Bindable(event="imageChanged")]
+        public function get dndimage():ByteArray {
+            return getImage(true);
+        }
+
+        /** Fetches the feature's image, as defined by the icon element in the feature definition.
+        * @param dnd if true, overrides the normal image and returns the one defined by the dnd property instead. */
+        private function getImage(dnd:Boolean = false):ByteArray {
             var icon:XMLList = _xml.icon;
             var imageURL:String = null;
             var img:ByteArray;
 
-            if ( icon.length() > 0 && icon[0].hasOwnProperty("@image") )
+            if ( dnd && icon.length() > 0 && icon[0].hasOwnProperty("@dnd") ) {
+                imageURL = icon[0].@dnd;
+            } else if ( icon.length() > 0 && icon[0].hasOwnProperty("@image") ) {
                 imageURL = icon[0].@image;
+            }
 
             if ( imageURL != null ) {
                 img = CachedDataLoader.loadData(imageURL, imageLoaded);
@@ -122,6 +152,14 @@ package net.systemeD.potlatch2.mapfeatures {
             }
             var bitmap:BitmapAsset = new missingIconCls() as BitmapAsset;
             return new PNGEncoder().encode(bitmap.bitmapData);
+        }
+        
+        /** Can this feature be drag-and-dropped from the side panel? By default, any "point" feature can,
+        *   unless it has <point draganddrop="no"/> 
+        * */
+        public function canDND():Boolean {
+        	var point:XMLList = _xml.elements("point");
+        	return point.length() > 0 && !(XML(point[0]).attribute("draganddrop")[0] == "no");
         }
 
         private function imageLoaded(url:String, data:ByteArray):void {
@@ -133,6 +171,7 @@ package net.systemeD.potlatch2.mapfeatures {
             return makeHTMLIcon(icon, entity);
         }
 
+        /** Convert the contents of the "icon" tag as an HTML string, with variable substitution. */
         public static function makeHTMLIcon(icon:XMLList, entity:Entity):String {
             if ( icon == null )
                 return "";
@@ -146,6 +185,7 @@ package net.systemeD.potlatch2.mapfeatures {
             return txt;
         }
 
+        /** Basic HTML escaping. */
         public static function htmlEscape(str:String):String {
             var newStr:String = str.replace(/&/g, "&amp;");
             newStr = newStr.replace(/</g, "&lt;");
@@ -196,14 +236,23 @@ package net.systemeD.potlatch2.mapfeatures {
 			}
         }
 
-        /** Whether there is a help string defined. */
+        /** Whether there is a help string defined or one can be derived from tags. */
         public function hasHelpURL():Boolean {
-            return _xml.help.length() > 0;
+            return _xml.help.length() > 0 || _tags.length > 0;
         }
 
-        /** The defined help string, if any. */
+        /** The defined help string, if any. If none, generate one from tags on the feature, pointing to the OSM wiki. */
         public function get helpURL():String {
-            return _xml.help;
+        	if (_xml.help.length() > 0)
+                return _xml.help;
+            else if (_tags.length > 0) {
+                if (_tags[0].v == "*")
+                    return "http://www.openstreetmap.org/wiki/Key:" + _tags[0].k;
+                else
+                    return "http://www.openstreetmap.org/wiki/Tag:" + _tags[0].k + "=" + _tags[0].v;                
+            } else
+                return "";
+
         }
     }
 }

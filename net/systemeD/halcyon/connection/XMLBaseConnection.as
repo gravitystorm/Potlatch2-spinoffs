@@ -6,8 +6,6 @@ package net.systemeD.halcyon.connection {
 	import flash.net.*;
     import org.iotashan.oauth.*;
 
-	import net.systemeD.halcyon.Globals;
-
     /**
     * XMLBaseConnection is the common code between connecting to an OSM server
     * (i.e. XMLConnection) and connecting to a standalone .osm file (i.e. OSMConnection)
@@ -19,8 +17,6 @@ package net.systemeD.halcyon.connection {
 		}
 		
         protected function loadedMap(event:Event):void {
-            dispatchEvent(new Event(LOAD_COMPLETED));
-
             var map:XML = new XML(URLLoader(event.target).data);
             var id:Number;
             var version:uint;
@@ -30,10 +26,15 @@ package net.systemeD.halcyon.connection {
             var node:Node, newNode:Node;
             var unusedNodes:Object={};
 
-			var minlon:Number=map.bounds.@minlon;
-			var maxlon:Number=map.bounds.@maxlon;
-			var minlat:Number=map.bounds.@minlat;
-			var maxlat:Number=map.bounds.@maxlat;
+			var minlon:Number, maxlon:Number, minlat:Number, maxlat:Number;
+			var singleEntityRequest:Boolean=true;
+			if (map.bounds.@minlon.length()) {
+				minlon=map.bounds.@minlon;
+				maxlon=map.bounds.@maxlon;
+				minlat=map.bounds.@minlat;
+				maxlat=map.bounds.@maxlat;
+				singleEntityRequest=false;
+			}
 
             for each(var relData:XML in map.relation) {
                 id = Number(relData.@id);
@@ -97,7 +98,11 @@ package net.systemeD.halcyon.connection {
 				                   Number(nodeData.@uid),
 				                   nodeData.@timestamp);
 				
-				if ( node == null || !node.loaded) {
+				if ( singleEntityRequest ) {
+					// it's a revert request, so create/update the node
+					setOrUpdateNode(newNode, true);
+				} else if ( node == null || !node.loaded) {
+					// the node didn't exist before, so create/update it
 					newNode.parentsLoaded=newNode.within(minlon,maxlon,minlat,maxlat);
 					setOrUpdateNode(newNode, true);
 				} else {
@@ -114,7 +119,7 @@ package net.systemeD.halcyon.connection {
                 timestamp = data.@timestamp;
 
                 var way:Way = getWay(id);
-                if ( way == null || !way.loaded ) {
+                if ( way == null || !way.loaded || singleEntityRequest) {
                     var nodes:Array = [];
                     for each(var nd:XML in data.nd) {
 						var nodeid:Number=Number(nd.@ref)
@@ -135,6 +140,7 @@ package net.systemeD.halcyon.connection {
             }
             
             registerPOINodes();
+            dispatchEvent(new Event(LOAD_COMPLETED));
         }
         
         protected function registerPOINodes():void {

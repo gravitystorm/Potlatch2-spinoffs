@@ -6,7 +6,6 @@ package net.systemeD.halcyon {
 	import net.systemeD.halcyon.WayUI;
 	import net.systemeD.halcyon.connection.*;
 	import net.systemeD.halcyon.styleparser.RuleSet;
-	import net.systemeD.halcyon.Globals;
 
 	/** Manages the drawing of map entities, allocating their sprites etc. */
 	public class MapPaint extends Sprite {
@@ -204,6 +203,8 @@ package net.systemeD.halcyon {
 			if (!wayuis[way.id]) {
 				wayuis[way.id]=new WayUI(way,this);
 				way.addEventListener(Connection.WAY_DELETED, wayDeleted);
+			} else {
+				wayuis[way.id].redraw();
 			}
 			return wayuis[way.id];
 		}
@@ -249,8 +250,8 @@ package net.systemeD.halcyon {
 
 		/** Remove a node's UI object. */
 		public function deleteNodeUI(node:Node):void {
-			if (!nodeuis[node.id]) { return; }
 			node.removeEventListener(Connection.NODE_DELETED, nodeDeleted);
+			if (!nodeuis[node.id]) { return; }
 			nodeuis[node.id].removeSprites();
 			nodeuis[node.id].removeEventListeners();
 			delete nodeuis[node.id];
@@ -277,8 +278,8 @@ package net.systemeD.halcyon {
 
         /** Remove a marker's UI object. */
         public function deleteMarkerUI(marker:Marker):void {
-            if (!markeruis[marker.id]) { return; }
             marker.removeEventListener(Connection.NODE_DELETED, markerDeleted);
+            if (!markeruis[marker.id]) { return; }
             markeruis[marker.id].removeSprites();
             markeruis[marker.id].removeEventListeners();
             delete markeruis[marker.id];

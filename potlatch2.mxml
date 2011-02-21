@@ -68,6 +68,8 @@
         <mx:TextArea id="dataWorking" text="" right="35" top="3" disabledColor="black" backgroundDisabledColor="0xFFFFEA" height="18"
             enabled="false" borderThickness="0"
             showEffect="{wipeIn}" hideEffect="{wipeOut}"/>
+        <mx:TextArea id="coordsbox" left="0" top="0" disabledColor="black" backgroundDisabledColor="0xFFFFEA" height="33"
+            width="57" enabled="false" borderThickness="0" visible="false"/>
 
     </mx:Canvas>
 
@@ -84,6 +86,7 @@
 		import net.systemeD.potlatch2.options.*;
 		import net.systemeD.potlatch2.utils.*;
         import net.systemeD.potlatch2.mygpx.*;
+		import net.systemeD.controls.FloatingAlert;
 		import mx.managers.PopUpManager;
 		import flash.system.Security;
 		import flash.net.*;
@@ -168,14 +171,6 @@
             theMap.updateSize(w,h);
 			theMap.addEventListener(MapEvent.SCALE, scaleHandler);
 
-			// add mask for map
-			var s:Sprite=new Sprite();
-			s.graphics.beginFill(0xFFFFFF,100);
-			s.graphics.drawRect(0,0,w,h);
-			s.graphics.endFill();
-			_root.addChild(s);
-			theMap.mask=s;
-
 			// add attribution/logo sprite
 			var overlay:Sprite=new Sprite();
 			var attribution:TextField=new TextField();
@@ -223,6 +218,9 @@
             theController = new EditController(theMap, tagViewer, toolbox);
             theController.setActive();
             
+            theMap.addEventListener(MapEvent.MOUSEOVER, mouseoverHandler);
+            theMap.addEventListener(MapEvent.TOGGLE_LATLON, togglelatlonHandler);
+            
             var conn:Connection = Connection.getConnectionInstance();
             conn.addEventListener(Connection.LOAD_STARTED, onDataStart);
             conn.addEventListener(Connection.LOAD_COMPLETED, onDataComplete);
@@ -231,7 +229,8 @@
             conn.addEventListener(Connection.DATA_DIRTY, onDataDirty);
             conn.addEventListener(Connection.DATA_CLEAN, onDataClean);
 			conn.addEventListener(MapEvent.ERROR, onMapError);
-			conn.addEventListener(MapEvent.ATTENTION, onAttention);
+			conn.addEventListener(AttentionEvent.ATTENTION, onAttention);
+			conn.addEventListener(AttentionEvent.ALERT, onAlert);
 
             // set the access token from saved cookie
             var tokenObject:SharedObject = SharedObject.getLocal("access_token");
@@ -249,7 +248,7 @@
 
 			// Load arbitrary GPX from provided URL
 			if (loaderInfo.parameters['gpx_url']) {
-				var vectorlayer:VectorLayer=new VectorLayer(name,theMap,"gpx.css");
+				var vectorlayer:VectorLayer=new VectorLayer(name,theMap,"stylesheets/gpx.css");
 				vectorlayer.url=loaderInfo.parameters['gpx_url'];
 				var gpx:GpxImporter=new GpxImporter(vectorlayer, vectorlayer.paint, [vectorlayer.url], 
 				                                    function(success:Boolean,message:String=null):void {
@@ -292,7 +291,7 @@
 			trace("showing alert with "+buttons);
 			Alert.show(mapEvent.params.message, 'Error', buttons, null, function(closeEvent:CloseEvent):void { 
 				switch (closeEvent.detail) {
-					case mx.controls.Alert.CANCEL:	mapEvent.params.cancel(); break;
+					case mx.controls.Alert.CANCEL:	mapEvent.params.cancel(); break; //fixme? this gets called if user presses escape, even if there's no cancel button.
 					case mx.controls.Alert.YES:		mapEvent.params.yes(); break;
 					case mx.controls.Alert.NO:		mapEvent.params.no(); break;
 					default:						if (mapEvent.params.ok) mapEvent.params.ok();
@@ -300,10 +299,10 @@
 			});
 		}
 
-		/* Highlight an entity in response to an 'attention' event */
+		/** Highlight an entity in response to an 'attention' event */
 
-		public function onAttention(mapEvent:MapEvent):void {
-			var entity:Entity=mapEvent.params.entity;
+		public function onAttention(event:AttentionEvent):void {
+			var entity:Entity=event.entity;
 			if (entity is Relation) {
 				// If it's a relation, just bring up the editor panel
 				var panel:RelationEditorPanel = RelationEditorPanel(
@@ -332,6 +331,13 @@
 			theController.setState(theController.findStateForSelection([entity]));
 		}
 
+		/** Display floating warning in response to an 'alert' event */
+
+		public function onAlert(event:AttentionEvent):void {
+			var alert:FloatingAlert=new FloatingAlert(event.message);
+			stage.addChild(alert);
+		}
+
         public function onResizeMap():void {
             if ( theMap != null )
                 theMap.updateSize(map_area.width, map_area.height);
@@ -346,6 +352,17 @@
 				toolbox.y=Math.min(toolbox.y,stage.stageHeight-toolbox.height-10-e.params.y);
 			}
 		}
+
+        private function mouseoverHandler(e:MapEvent):void {
+            if (coordsbox.visible) {
+                coordsbox.text= Number(e.params.x).toFixed(5) + "\n " + Number(e.params.y).toFixed(5); // Not sure if 5 dp's really required.
+            }
+        }
+
+        private function togglelatlonHandler(e:MapEvent):void {
+            coordsbox.visible = e.params.latlon;
+        }
+
 
         private function onDataStart(event:Event):void {
 			switch (event.type) {

@@ -17,9 +17,9 @@ Potlatch 2: main outstanding issues
 
 == Tag editing ==
 
+** SuperTabNavigator frequently doesn't respond to tab clicks
 * initialiseEditors is quite slow (typically 150ms)
 * Tag panel jumps up and down when number spinner is used on bike parking
-* New relation panel jumps up and down, but I haven't seen it on editing existing relations
 * Changing relation ref doesn't update the main tagviewer until the entity is reselected
 * Changing type of relation doesn't update the main tagviewer until the entity is reselected
 * Adding a relation via the advanced panel doesn't update the simple panel
@@ -27,12 +27,13 @@ Potlatch 2: main outstanding issues
 * 'Select relation' panel could be sorted by something useful (e.g. ref for route relations)
 * Checkbox needs a clear button, or to be changed to a ✓✗? triplet
 * Relations should talk to FunctionKeyManager too, so you can assign a route to a particular key
+* RelationsGrid should be a discrete component, so we don't repeat ourselves so much in TagViewer.mxml
 
 == UI ==
 
+** Keypress detection is very erratic, depending on focus - need to work out where events are going (Application.application?) and sense them there
 * Failing to parse map_features should be an error state
 * Escape should rewind the entity to how it was before the current ControllerState. (Record a position in the undo stack when exiting a ControllerState, and escape would rewind to that)
-* Potlatch 1-style "floaty warnings"
 * Custom imagery dialog fixes
 * Ctrl-clicking two areas (one inside the other) should create a multipolygon
 * GPS loading should have a loading... label
@@ -43,6 +44,7 @@ Potlatch 2: main outstanding issues
 
 == Rendering (Halcyon) ==
 
+** When deleting a tagged node from a way, the NodeUI sticks around (fairly critical bug)
 * halcyon_viewer needs updating for new tileurl stuff
 * Shields
 * More line decoration (cliffs etc.), and implied values for 'dashes' if not supplied
@@ -64,6 +66,8 @@ Potlatch 2: main outstanding issues
 * Reopen?
 * Handle errors when closing bugs (especially nickname-based errors)
 
+== Reverse Button ==
+* Doesn't look like a button
 
 Requested enhancements
 ----------------------

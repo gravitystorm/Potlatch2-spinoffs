@@ -10,7 +10,6 @@ package net.systemeD.halcyon {
     import flash.geom.Point;
     import net.systemeD.halcyon.styleparser.*;
     import net.systemeD.halcyon.connection.*;
-    import net.systemeD.halcyon.Globals;
 
     public class MarkerUI extends EntityUI {
 
@@ -29,8 +28,8 @@ package net.systemeD.halcyon {
                     if (stateClasses[state]) { this.stateClasses[state]=stateClasses[state]; }
                 }
             }
-            entity.addEventListener(Connection.NODE_MOVED, markerMoved);
-            entity.addEventListener(Connection.NODE_ALTERED, markerAltered);
+            entity.addEventListener(Connection.NODE_MOVED, markerMoved, false, 0, true);
+            entity.addEventListener(Connection.NODE_ALTERED, markerAltered, false, 0, true);
             attachRelationListeners();
             redraw();
         }
@@ -107,7 +106,7 @@ package net.systemeD.halcyon {
                             // 'load' icon (actually just from library)
                             var loader:ExtendedLoader = new ExtendedLoader();
                             loader.info['sublayer']=sublayer;
-                            loader.contentLoaderInfo.addEventListener(Event.COMPLETE, loadedIcon);
+                            loader.contentLoaderInfo.addEventListener(Event.COMPLETE, loadedIcon, false, 0, true);
                             loader.loadBytes(paint.ruleset.images[s.icon_image]);
                             iconnames[sublayer]=s.icon_image;
                         }

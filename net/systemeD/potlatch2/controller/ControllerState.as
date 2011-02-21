@@ -6,9 +6,11 @@ package net.systemeD.potlatch2.controller {
     import net.systemeD.halcyon.connection.*;
     import net.systemeD.potlatch2.collections.Imagery;
     import net.systemeD.potlatch2.EditController;
-	import net.systemeD.halcyon.Globals;
 	import net.systemeD.potlatch2.save.SaveManager;
 	import flash.ui.Keyboard;
+	import mx.controls.Alert;
+	import mx.events.CloseEvent;
+	
     /** Represents a particular state of the controller, such as "dragging a way" or "nothing selected". Key methods are 
     * processKeyboardEvent and processMouseEvent which take some action, and return a new state for the controller. 
     * 
@@ -66,6 +68,7 @@ package net.systemeD.potlatch2.controller {
 				case 83:	SaveManager.saveChanges(); break;										// S - save
 				case 84:	controller.tagViewer.togglePanel(); return null;						// T - toggle tags panel
 				case 90:	MainUndoStack.getGlobalStack().undo(); return null;						// Z - undo
+				case Keyboard.ESCAPE:	revertSelection(); break;									// ESC - revert to server version
 				case Keyboard.NUMPAD_ADD:															// + - add tag
 				case 187:	controller.tagViewer.selectAdvancedPanel();								//   |
 							controller.tagViewer.addNewTag(); return null;							//   |
@@ -184,9 +187,24 @@ package net.systemeD.potlatch2.controller {
 		protected function setSourceTag():void {
 			if (selectCount!=1) { return; }
 			if (Imagery.instance().selected && Imagery.instance().selected.sourcetag) {
-				firstSelected.setTag('source',Imagery.instance().selected.sourcetag, MainUndoStack.getGlobalStack().addAction);
+				if ("sourcekey" in Imagery.instance().selected)
+				    firstSelected.setTag(Imagery.instance().selected.sourcekey,Imagery.instance().selected.sourcetag, MainUndoStack.getGlobalStack().addAction);
+				else
+				    firstSelected.setTag('source',Imagery.instance().selected.sourcetag, MainUndoStack.getGlobalStack().addAction);
 			}
 			controller.updateSelectionUI();
+		}
+
+		/** Revert all selected items to previously saved state, via a dialog box. */
+		protected function revertSelection():void {
+			if (selectCount==0) return;
+			Alert.show("Revert selected items to the last saved version, discarding your changes?","Are you sure?",Alert.YES | Alert.CANCEL,null,revertHandler);
+		}
+		protected function revertHandler(event:CloseEvent):void {
+			if (event.detail==Alert.CANCEL) return;
+			for each (var item:Entity in _selection) {
+				controller.connection.loadEntity(item);
+			}
 		}
 
 		// Selection getters

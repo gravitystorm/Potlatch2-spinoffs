@@ -1,16 +1,12 @@
 package net.systemeD.potlatch2.controller {
 	import flash.events.*;
-	import flash.display.DisplayObject;
-	import flash.ui.Keyboard;
 	import flash.geom.Point;
-    import net.systemeD.potlatch2.EditController;
-    import net.systemeD.potlatch2.tools.Parallelise;
-    import net.systemeD.potlatch2.tools.Quadrilateralise;
-    import net.systemeD.potlatch2.tools.Simplify;
-    import net.systemeD.halcyon.connection.*;
-	import net.systemeD.halcyon.MapPaint;
+	import flash.ui.Keyboard;
+	
 	import net.systemeD.halcyon.WayUI;
-	import net.systemeD.halcyon.Globals;
+	import net.systemeD.halcyon.connection.*;
+	import net.systemeD.potlatch2.tools.Quadrilateralise;
+	import net.systemeD.potlatch2.tools.Simplify;
 
     /** Behaviour that takes place while a way is selected includes: adding a node to the way, straightening/reshaping the way, dragging it. */
     public class SelectedWay extends ControllerState {
@@ -18,28 +14,21 @@ package net.systemeD.potlatch2.controller {
         protected var initWay:Way;
         private var clicked:Point;		// did the user enter this state by clicking at a particular point?
 		private var wayList:Array;		// list of ways to cycle through with '/' keypress
+		private var initIndex: int;     // index of last selected node if entered from SelectedWayNode
         
         /** 
         * @param way The way that is now selected.
         * @param point The location that was clicked.
         * @param ways An ordered list of ways sharing a node, to make "way cycling" work. */
-        public function SelectedWay(way:Way, point:Point=null, ways:Array=null) {
+        public function SelectedWay(way:Way, point:Point=null, ways:Array=null, index:int=0) {
             initWay = way;
 			clicked = point;
 			wayList = ways;
+			initIndex=index;
         }
- 
-        /** Make this way selected, and update UI appropriately. */
-        protected function selectWay(way:Way):void {
-            if ( firstSelected is Way && Way(firstSelected)==way )
-                return;
 
-            clearSelection(this);
-            controller.map.setHighlight(way, { selected: true, hover: false });
-            controller.map.setHighlightOnNodes(way, { selectedway: true });
-            selection = [way];
-            controller.updateSelectionUI();
-            initWay = way;
+        private function updateSelectionUI(e:Event):void {
+            controller.updateSelectionUIWithoutTagChange();
         }
 
         /** Tidy up UI as we transition to a new state without the current selection. */
@@ -85,6 +74,9 @@ package net.systemeD.potlatch2.controller {
 				case 191: /* / */           return cycleWays();
 				case Keyboard.BACKSPACE:	
 				case Keyboard.DELETE:		if (event.shiftKey) { return deleteWay(); } break;
+                case 188: /* , */           return new SelectedWayNode(initWay, initIndex); // allows navigating from one way to another by keyboard
+                case 190: /* . */           return new SelectedWayNode(initWay, initIndex); //  using <, > and /           
+
 			}
 			var cs:ControllerState = sharedKeyboardEvents(event);
 			return cs ? cs : this;
@@ -101,7 +93,9 @@ package net.systemeD.potlatch2.controller {
 				}
 			}
 			wayList=wayList.slice(1).concat(wayList[0]);
-			return new SelectedWay(wayList[0], clicked, wayList);
+			// Find the new way's index of the currently "selected" node, to facilitate keyboard navigation
+			var newindex:int = Way(wayList[0]).indexOfNode(initWay.getNode(initIndex));
+			return new SelectedWay(wayList[0], clicked, wayList, newindex);
 		}
 
 		/** Perform deletion of currently selected way. */
@@ -113,9 +107,15 @@ package net.systemeD.potlatch2.controller {
 
         /** Officially enter this state by marking the previously nominated way as selected. */
         override public function enterState():void {
-            selectWay(initWay);
+            if (firstSelected!=initWay) {
+	            clearSelection(this);
+	            controller.map.setHighlight(initWay, { selected: true, hover: false });
+	            controller.map.setHighlightOnNodes(initWay, { selectedway: true });
+	            selection = [initWay];
+	            controller.updateSelectionUI();
+	            initWay.addEventListener(Connection.WAY_REORDERED, updateSelectionUI, false, 0, true);
+			}
 			controller.map.setPurgable(selection,false);
-			Globals.vars.root.addDebug("**** -> "+this+" "+firstSelected.id);
         }
         /** Officially leave the state, remembering the current way's tags for future repeats. */
         // TODO: tweak this so that repeat tags aren't remembered if you only select a way in order to branch off it. (a la PL1) 
@@ -124,8 +124,8 @@ package net.systemeD.potlatch2.controller {
               controller.clipboards['way']=firstSelected.getTagsCopy();
             }
 			controller.map.setPurgable(selection,true);
+            firstSelected.removeEventListener(Connection.WAY_REORDERED, updateSelectionUI);
             clearSelection(newState);
-			Globals.vars.root.addDebug("**** <- "+this);
         }
 
         /** @return "SelectedWay" */

@@ -43,13 +43,14 @@ package net.systemeD.potlatch2.collections {
 					obj[set.child(a).name()]=set.child(a);
 				}
                 collection.push(obj);
-				if (obj.url==saved_url || (obj.name==saved_name && obj.name!='Custom')) { isInMenu=true; }
+				if (obj.url==saved_url) { isInMenu=true; }
+				else if (obj.name==saved_name && obj.name!='Custom') { isInMenu=true; saved_url=obj.url; }
 			}
 			if (saved_url && !isInMenu) { collection.push({ name:saved_name, url:saved_url }); }
 
             // pick a stylesheet to be set. It should be the saved one, if it is in the menu
             // or alternatively the first one on the menu,
-            // or finally try 'potlatch.css'
+            // or finally try 'stylesheets/potlatch.css'
 			for each (var ss:Object in collection) {
 				if (ss.name==saved_name || ss.url==saved_url) {
 					setStylesheet(ss.name, ss.url);
@@ -63,8 +64,8 @@ package net.systemeD.potlatch2.collections {
                 setStylesheet(s.name, s.url);
               } else {
                 //hit and hope. FIXME should this be an error state?
-                collection.push({ name:'Potlatch', url:'potlatch.css'});
-                setStylesheet('Potlatch','potlatch.css');
+                collection.push({ name:'Potlatch', url:'stylesheets/potlatch.css'});
+                setStylesheet('Potlatch','stylesheets/potlatch.css');
               }
             }
 			FunctionKeyManager.instance().registerListener('Map style',
@@ -89,8 +90,11 @@ package net.systemeD.potlatch2.collections {
 		
 		[Bindable(event="collection_changed")]
 		public function getCollection():ArrayCollection {
-			return new ArrayCollection(collection);
+			var available:Array=[];
+			for each (var ss:Object in collection) {
+				if (!ss.corestyle || ss.corestyle!='no') available.push(ss);
+			}
+			return new ArrayCollection(available);
 		}
-
 	}
 }

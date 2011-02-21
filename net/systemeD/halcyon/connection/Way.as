@@ -1,7 +1,7 @@
 package net.systemeD.halcyon.connection {
     import flash.geom.Point;
-	import net.systemeD.halcyon.Globals;
-	import net.systemeD.halcyon.connection.actions.*;
+    
+    import net.systemeD.halcyon.connection.actions.*;
 
     public class Way extends Entity {
         private var nodes:Array;
@@ -56,9 +56,36 @@ package net.systemeD.halcyon.connection {
             return nodes[index];
         }
 
+        public function getFirstNode():Node {
+            return nodes[0];
+        }
+
 		public function getLastNode():Node {
 			return nodes[nodes.length-1];
 		}
+		
+		/** Given one node, return the next in sequence, cycling around a loop if necessary. */
+		// TODO make behave correctly for P-shaped topologies?
+		public function getNextNode(node:Node):Node {
+			// If the last node in a loop is selected, this behaves correctly.
+		    var i:uint = indexOfNode(node);
+		    if(i < length-1)
+	            return nodes[i+1];
+	        return null;
+	        // What should happen for very short lengths?      
+		}
+        
+        // TODO make behave correctly for P-shaped topologies?
+        /** Given one node, return the previous, cycling around a loop if necessary. */
+        public function getPrevNode(node:Node):Node {
+            var i:uint = indexOfNode(node);
+            if(i > 0)
+                return nodes[i-1];
+            if(i == 0 && isArea() )
+                return nodes[nodes.length - 2]
+            return null;
+            // What should happen for very short lengths?      
+        }
 
         public function insertNode(index:uint, node:Node, performAction:Function):void {
 			performAction(new AddNodeToWayAction(this, node, nodes, index));
@@ -109,6 +136,7 @@ package net.systemeD.halcyon.connection {
             markDirty();
         }
 
+		/** Merges another way into this one, removing the other one. */
 		public function mergeWith(way:Way,topos:int,frompos:int, performAction:Function):void {
 			performAction(new MergeWaysAction(this, way, topos, frompos));
 		}
@@ -218,6 +246,16 @@ package net.systemeD.halcyon.connection {
 			return left;
 		}
 
+        public function get angle():Number {
+            var dx:Number = nodes[nodes.length-1].lon - nodes[0].lon;
+            var dy:Number = nodes[nodes.length-1].latp - nodes[0].latp;
+            if (dx != 0 || dy != 0) {
+                return Math.atan2(dx,dy)*(180/Math.PI);
+            } else {
+                return 0;
+            }
+        }
+
 		internal override function isEmpty():Boolean {
 			return (deleted || (nodes.length==0));
 		}
@@ -225,6 +263,31 @@ package net.systemeD.halcyon.connection {
 		public override function getType():String {
 			return 'way';
 		}
+		
+		public override function isType(str:String):Boolean {
+			if (str=='way') return true;
+			if (str=='line' && !isArea()) return true;
+			if (str=='area' &&  isArea()) return true;
+			return false;
+		}
+		
+		/** Whether the way has a loop that joins back midway along its length */
+		public function isPShape():Boolean {
+			return getFirstNode() != getLastNode() && (!hasOnceOnly(getFirstNode()) || !hasOnceOnly(getLastNode()) );
+		}
+		
+		/** Given a P-shaped way, return the index of midway node that one end connects back to. */
+		public function getPJunctionNodeIndex():uint {
+			if (isPShape()) {
+			    if (hasOnceOnly(getFirstNode())) {
+			        // nodes[0] is the free end
+			        return nodes.indexOf(getLastNode());
+			    } else {
+			        // nodes[0] is in the loop
+			        return nodes.lastIndexOf(getFirstNode());
+			    }
+			}
+			return null;
+		}
     }
-
 }

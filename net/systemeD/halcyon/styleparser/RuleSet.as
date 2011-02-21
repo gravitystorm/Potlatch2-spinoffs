@@ -8,17 +8,21 @@ package net.systemeD.halcyon.styleparser {
     import net.systemeD.halcyon.connection.Entity;
 
     import net.systemeD.halcyon.connection.*;
-	import net.systemeD.halcyon.Globals;
-//	import bustin.dev.Inspector;
 	
-	/** A set of rules for rendering a map, as retrieved from a MapCSS file. */
+	/** A complete stylesheet, as loaded from a MapCSS file. It contains all selectors, declarations, 
+		and embedded images.																				</p><p>
+		
+		The RuleSet class has two principal methods: getStyles, which calculates the styles that apply
+		to an entity (returned as a StyleList); and parse, which parses a MapCSS stylesheet into
+		a complete RuleSet. */
+
 	public class RuleSet {
 
-		/** Has it loaded yet? */
+		/** Is the RuleSet fully loaded and available for use? */
 		public var loaded:Boolean=false; 
-		/** Loaded images */
+		/** Hash of loaded images. Hash key is filename, value is BitmapData for the image. */
 		public var images:Object=new Object();
-		/** Width of each bitmap image. */
+		/** Hash of image widths. Hash key is filename, value is pixel width. */
 		public var imageWidths:Object=new Object();	
 		private var redrawCallback:Function=null;	// function to call when CSS loaded
 		private var iconCallback:Function=null;		// function to call when all icons loaded
@@ -224,6 +228,7 @@ package net.systemeD.halcyon.styleparser {
 			yellowgreen:0x9acd32 };
 
 		/** Constructor */
+
 		public function RuleSet(mins:uint,maxs:uint,redrawCall:Function=null,iconLoadedCallback:Function=null):void {
 			minscale = mins;
 			maxscale = maxs;
@@ -231,7 +236,8 @@ package net.systemeD.halcyon.styleparser {
 			iconCallback = iconLoadedCallback;
 		}
 
-		/** Get styles for an object*/
+		/** Create a StyleList for an Entity, by creating a blank StyleList, then running each StyleChooser over it.
+			@see net.systemeD.halcyon.styleparser.StyleList */
 
 		public function getStyles(obj:Entity, tags:Object, zoom:uint):StyleList {
 			var sl:StyleList=new StyleList();
@@ -244,24 +250,20 @@ package net.systemeD.halcyon.styleparser {
 		// ---------------------------------------------------------------------------------------------------------
 		// Loading stylesheet
 
-        /** Load ruleset the MapCSS file referenced in <code>str</code>.*/
+        /** Load and then parse a MapCSS stylesheet. Usually you will supply a filename, but you can also pass 
+			a complete stylesheet in the string parameter. (Any string containing space characters will be 
+			assumed to be a stylesheet rather than a filename.) */
+
 		public function loadFromCSS(str:String):void {
 			if (str.match(/[\s\n\r\t]/)!=null) { parseCSS(str); loaded=true; redrawCallback(); return; }
 
-			var request:DebugURLRequest=new DebugURLRequest(str);
-			var loader:URLLoader=new URLLoader();
-
-//			request.method=URLRequestMethod.GET;
-			loader.dataFormat = URLLoaderDataFormat.TEXT;
-			loader.addEventListener(Event.COMPLETE, 					doParseCSS);
-			loader.addEventListener(HTTPStatusEvent.HTTP_STATUS,		httpStatusHandler);
-			loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR,	securityErrorHandler);
-			loader.addEventListener(IOErrorEvent.IO_ERROR,				ioErrorHandler);
-			loader.load(request.request);
+			var cssLoader:NestedCSSLoader=new NestedCSSLoader();
+			cssLoader.addEventListener(Event.COMPLETE, doParseCSS);
+			cssLoader.load(str);
 		}
 
 		private function doParseCSS(e:Event):void {
-			parseCSS(e.target.data);
+			parseCSS(e.target.css);
 		}
 
 		private function parseCSS(str:String):void {
@@ -272,11 +274,11 @@ package net.systemeD.halcyon.styleparser {
 		}
 
 
-		// ------------------------------------------------------------------------------------------------
-		/** Load all referenced images*/
-		// ** will duplicate if referenced twice, shouldn't
+		/// ------------------------------------------------------------------------------------------------
+		/** Load all images referenced in the RuleSet (for example, icons or bitmap fills).
+			FIXME: if an image is referenced twice, it'll be requested twice. */
 		
-		public function loadImages():void {
+		private function loadImages():void {
 			var filename:String;
 			for each (var chooser:StyleChooser in choosers) {
 				for each (var style:Style in chooser.styles) {
@@ -291,16 +293,14 @@ package net.systemeD.halcyon.styleparser {
 					var loader:ExtendedURLLoader=new ExtendedURLLoader();
 					loader.dataFormat=URLLoaderDataFormat.BINARY;
 					loader.info['filename']=filename;
-					loader.addEventListener(Event.COMPLETE, 					loadedImage,			false, 0, true);
-					loader.addEventListener(HTTPStatusEvent.HTTP_STATUS,		httpStatusHandler,		false, 0, true);
+					loader.addEventListener(Event.COMPLETE, 					loadedImage,				false, 0, true);
+					loader.addEventListener(HTTPStatusEvent.HTTP_STATUS,		httpStatusHandler,			false, 0, true);
 					loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR,	onImageLoadSecurityError,	false, 0, true);
 					loader.addEventListener(IOErrorEvent.IO_ERROR,				onImageLoadioError,			false, 0, true);
 					loader.load(request.request);
 				}
 			}
 		}
-
-		// data handler
 
 		private function loadedImage(event:Event):void {
 			var fn:String=event.target.info['filename'];
@@ -336,13 +336,14 @@ package net.systemeD.halcyon.styleparser {
         }
 
 		private function httpStatusHandler( event:HTTPStatusEvent ):void { }
-		private function securityErrorHandler( event:SecurityErrorEvent ):void { Globals.vars.root.addDebug("securityerrorevent"); }
-		private function ioErrorHandler( event:IOErrorEvent ):void { Globals.vars.root.addDebug("ioerrorevent"); }
+		private function securityErrorHandler( event:SecurityErrorEvent ):void { trace("securityerrorevent"); }
+		private function ioErrorHandler( event:IOErrorEvent ):void { trace("ioerrorevent"); }
 
 		// ------------------------------------------------------------------------------------------------
 		// Parse CSS
 
-		/** Parse the given MapCSS file by repeatedly throwing regular expressions at it. */
+		/** Parse a MapCSS stylesheet into a set of StyleChoosers. The parser is regular expression-based 
+			and runs sequentially through the file from start to end. */
 		public function parse(css:String):void {
 			var previous:uint=0;					// what was the previous CSS word?
 			var sc:StyleChooser=new StyleChooser();	// currently being assembled
@@ -416,11 +417,11 @@ package net.systemeD.halcyon.styleparser {
 				// Unknown pattern
 				} else if ((o=UNKNOWN.exec(css))) {
 					css=css.replace(UNKNOWN,'');
-					Globals.vars.root.addDebug("unknown: "+o[1]);
+					trace("unknown: "+o[1]);
 					// ** do some debugging with o[1]
 
 				} else {
-					Globals.vars.root.addDebug("choked on "+css);
+					trace("choked on "+css);
 					return;
 				}
 			}
@@ -434,7 +435,7 @@ package net.systemeD.halcyon.styleparser {
 		private function saveEval(expr:String):Eval {
 			evalsToLoad++;
 			var e:Eval=new Eval(expr);
-			e.addEventListener("swf_loaded",evalLoaded);
+			e.addEventListener("swf_loaded",evalLoaded, false, 0, true);
 			evals.push(e);
 			return e;
 		}
@@ -540,8 +541,11 @@ package net.systemeD.halcyon.styleparser {
 			return null;
 		}
 
-        /** Convert a color string given as either descriptive ("blue"), short hex ("#abc") or long hex ("#a0b0c0"), to an integer. 
-        * @default 0*/
+        /** Convert a colour string from CSS colour name ("blue"), short hex ("#abc") or long hex ("#a0b0c0"), 
+			to an integer. 
+			
+        	@default 0 */
+
         public static function parseCSSColor(colorStr:String):uint {
             colorStr = colorStr.toLowerCase();
             if (CSSCOLORS[colorStr]) {

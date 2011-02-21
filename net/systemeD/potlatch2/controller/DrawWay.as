@@ -7,12 +7,11 @@ package net.systemeD.potlatch2.controller {
 	import net.systemeD.halcyon.connection.*;
     import net.systemeD.halcyon.connection.actions.*;
 	import net.systemeD.halcyon.Elastic;
-	import net.systemeD.halcyon.Globals;
 	import net.systemeD.halcyon.MapPaint;
 
 	public class DrawWay extends SelectedWay {
 		private var elastic:Elastic;
-		private var editEnd:Boolean;
+		private var editEnd:Boolean;            // if true, we're drawing from node[n-1], else "backwards" from node[0] 
 		private var leaveNodeSelected:Boolean;
 		private var lastClick:Entity=null;
 		private var lastClickTime:Date;
@@ -29,8 +28,6 @@ package net.systemeD.potlatch2.controller {
 				lastClick=way.getNode(0);
 				lastClickTime=new Date();
 			}
-            way.addEventListener(Connection.WAY_NODE_REMOVED, fixElastic);
-            way.addEventListener(Connection.WAY_NODE_ADDED, fixElastic);
 		}
 		
 		override public function processMouseEvent(event:MouseEvent, entity:Entity):ControllerState {
@@ -50,6 +47,7 @@ package net.systemeD.potlatch2.controller {
                     controller.map.setPurgable([node], false);
 					resetElastic(node);
 					lastClick=node;
+					controller.updateSelectionUIWithoutTagChange();
 				} else if ( entity is Node ) {
 					if (entity==lastClick && (new Date().getTime()-lastClickTime.getTime())<1000) {
 						if (Way(firstSelected).length==1 && Way(firstSelected).getNode(0).parentWays.length==1) {
@@ -146,9 +144,9 @@ package net.systemeD.potlatch2.controller {
 		}
 		
 		protected function resetElastic(node:Node):void {
-			var mouse:Point = new Point(node.lon, node.latp);
-			elastic.start = mouse;
-			elastic.end = mouse;
+			elastic.start = new Point(node.lon, node.latp);
+			elastic.end   = new Point(controller.map.coord2lon(controller.map.mouseX),
+			                          controller.map.coord2latp(controller.map.mouseY));
 		}
 
         /* Fix up the elastic after a WayNode event - e.g. triggered by undo */
@@ -169,13 +167,15 @@ package net.systemeD.potlatch2.controller {
 			switch (event.keyCode) {
 				case Keyboard.ENTER:					return keyExitDrawing();
 				case Keyboard.ESCAPE:					return keyExitDrawing();
-				case Keyboard.DELETE:		return backspaceNode(MainUndoStack.getGlobalStack().addAction);
-				case Keyboard.BACKSPACE:	return backspaceNode(MainUndoStack.getGlobalStack().addAction);
+				case Keyboard.DELETE:		
+				case Keyboard.BACKSPACE:	
 				case 189: /* minus */       return backspaceNode(MainUndoStack.getGlobalStack().addAction);
 				case 82: /* R */            repeatTags(firstSelected); return this;
+				case 70: /* F */            followWay(); return this;
 			}
 			var cs:ControllerState = sharedKeyboardEvents(event);
 			return cs ? cs : this;
+			
 		}
 		
 		protected function keyExitDrawing():ControllerState {
@@ -238,7 +238,8 @@ package net.systemeD.potlatch2.controller {
 				Way(firstSelected).removeNodeByIndex(0, undo.push);
 				newDraw=0;
 			}
-			if (node.numParentWays==1 && Way(firstSelected).hasOnceOnly(node)) {
+			// Only actually delete the node if it has no other tags, and is not part of other ways (or part of this way twice)
+			if (node.numParentWays==1 && Way(firstSelected).hasOnceOnly(node) && !node.hasInterestingTags()) {
 				controller.map.setPurgable([node], true);
 				controller.connection.unregisterPOI(node);
 				node.remove(undo.push);
@@ -261,21 +262,75 @@ package net.systemeD.potlatch2.controller {
             return state;
 		}
 		
+		/** Extends the current way by "following" an existing way, after the user has already selected two nodes in a row. 
+			If drawing way has at least two nodes, and both belong to another way, and those ways are the same,
+			then find the next node, add that node, update screen and scroll the new node into shot if necessary.
+			TODO: add a bit of feedback (FloatingAlert?) when following can't be carried out for some reason. */
+		protected function followWay():void {
+			var curnode:Node;
+			var prevnode:Node;
+			if (Way(firstSelected).length < 2) return;
+
+			if (editEnd) {
+				curnode = Way(firstSelected).getLastNode();
+				prevnode = Way(firstSelected).getNode(Way(firstSelected).length-2);
+			} else {
+				curnode = Way(firstSelected).getNode(0);
+				prevnode = Way(firstSelected).getNode(1);
+			}
+			if (curnode.numParentWays <2 || prevnode.numParentWays <2) return;
+
+			var followedWay:Way;
+			for each (var way:Way in curnode.parentWays) {
+				if (way!=firstSelected && prevnode.hasParent(way))
+					followedWay = way;		// FIXME: could be smarter when there's more than one candidate
+			}
+			if (!followedWay) return;
+
+			var nextNode:Node;
+			if (followedWay.getNextNode(prevnode) == curnode) {
+				nextNode = followedWay.getNextNode(curnode);
+			} else if (followedWay.getNextNode(curnode) == prevnode){
+				nextNode = followedWay.getPrevNode(curnode);
+			} else if (followedWay.indexOfNode(curnode) > followedWay.indexOfNode(prevnode)) {
+				// The two nodes selected aren't actually consecutive. Make a half-hearted
+				// guess at which way to follow. Will be "incorrect" if the join in the loop
+				// is between the two points. 
+				nextNode = followedWay.getNextNode(curnode);
+			} else {
+				nextNode = followedWay.getPrevNode(curnode);
+			}
+			if (!nextNode) return;
+			if (nextNode.hasParent(firstSelected) && !(firstSelected as Way).hasOnceOnly(curnode)) return;
+
+			appendNode(nextNode as Node, MainUndoStack.getGlobalStack().addAction);
+			resetElastic(nextNode as Node);
+			lastClick=nextNode;
+			controller.map.setHighlight(nextNode, { selectedway: true });
+
+			// recentre the map if the new lat/lon is offscreen
+			controller.map.scrollIfNeeded(nextNode.lat,nextNode.lon);
+		}
+		
 		override public function enterState():void {
 			super.enterState();
 			
+            Way(firstSelected).addEventListener(Connection.WAY_NODE_REMOVED, fixElastic);
+            Way(firstSelected).addEventListener(Connection.WAY_NODE_ADDED, fixElastic);
+
 			var node:Node = Way(firstSelected).getNode(editEnd ? Way(firstSelected).length-1 : 0);
 			var start:Point = new Point(node.lon, node.latp);
 			elastic = new Elastic(controller.map, start, start);
 			controller.setCursor(controller.pen);
-			Globals.vars.root.addDebug("**** -> "+this);
 		}
 		override public function exitState(newState:ControllerState):void {
+            Way(firstSelected).removeEventListener(Connection.WAY_NODE_REMOVED, fixElastic);
+            Way(firstSelected).removeEventListener(Connection.WAY_NODE_ADDED, fixElastic);
+
 			super.exitState(newState);
 			controller.setCursor(null);
 			elastic.removeSprites();
 			elastic = null;
-			Globals.vars.root.addDebug("**** <- "+this);
 		}
 		override public function toString():String {
 			return "DrawWay";

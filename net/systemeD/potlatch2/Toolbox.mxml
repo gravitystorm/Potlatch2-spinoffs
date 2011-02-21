@@ -5,6 +5,10 @@
 	borderThicknessRight="1" borderThicknessLeft="1" borderThicknessBottom="3"
 	title="Edit Pathways and Areas" layout="horizontal" styleName="theToolBox">
 
+        <!-- the animation effect that controls the rotation of the reverse arrow.
+              We could get more fancy by using previous angle in angleFrom, and a longer duration, to give a nice animated effect -->
+        <mx:Rotate id="rotate" angleFrom="{angle-1}" angleTo="{angle}" target="{arrowBox}" originX="{arrowBox.width/2}" originY="{arrowBox.height/2}" duration="4"/>
+
 		<!-- Top row -->
 
 		<mx:Button icon="@Embed('../../../embedded/delete.svg')"
@@ -13,12 +17,34 @@
 			alpha="{getAlpha('delete')}" 
 			toolTip="{deleteToolTipText()}" 
 			width="24" height="24" />
-		<mx:Button icon="@Embed('../../../embedded/direction.svg')" 
-			click='doReverseDirection();'
-			enabled="{canDo('reverseDirection')}" 
-			alpha="{getAlpha('reverseDirection')}" 
-			toolTip="Reverse direction (V)" 
-			width="24" height="24" />
+
+        <mx:HBox width="24" height="24" y="4" x="36" borderStyle="solid" cornerRadius="12" click="reverseClicked();" horizontalAlign="center" verticalAlign="middle">
+            <mx:ViewStack id="rotateButtonStack">
+                <mx:HBox id="arrowBoxWrapper"><!-- changing the viewstack back onto a rotated hbox causes positioning glitches, hence this wrapper -->
+                    <!-- I can totally recommend adding borderStyle="solid" to arrowBox when debugging -->
+                    <mx:HBox id="arrowBox" horizontalAlign="center" verticalAlign="middle" width="24" height="24">
+                        <mx:Image id="arrow" source="@Embed('../../../embedded/arrow.svg')"
+                            alpha="{getAlpha('reverseDirection')}"
+                            toolTip="Reverse direction (V)"
+                            width="22" height="22"/>
+                    </mx:HBox>
+                </mx:HBox>
+                <mx:HBox id="clockwiseBox" horizontalAlign="center" verticalAlign="middle">
+                    <mx:Image id="clockwise" source="@Embed('../../../embedded/clockwise.svg')"
+                        alpha="{getAlpha('reverseDirection')}"
+                        toolTip="Reverse direction (V)"
+                        width="22" height="22" x="2" y="2"/>
+                </mx:HBox>
+                <mx:HBox id="antiClockwiseBox" horizontalAlign="center" verticalAlign="middle">
+                    <mx:Image id="anticlockwise" source="@Embed('../../../embedded/anti-clockwise.svg')"
+                        click='doReverseDirection();'
+                        enabled="{canDo('reverseDirection')}"
+                        alpha="{getAlpha('reverseDirection')}"
+                        toolTip="Reverse direction (V)"
+                        width="22" height="22" x="2" y="2"/>
+                </mx:HBox>
+            </mx:ViewStack>
+        </mx:HBox>
 		<mx:Button icon="@Embed('../../../embedded/cut.svg')" 
 			click='doSplit();'
 			enabled="{canDo('split')}" 
@@ -70,6 +96,9 @@
 
 		private var controller:EditController;
 
+        [Bindable]
+        public var angle:int=0;
+
 		public function init(controller:EditController):void {
 			this.controller=controller;
 			/* check if the toolbox was explictly turned off in a previous session */
@@ -87,6 +116,7 @@
 		public function updateSelectionUI():void {
 			dispatchEvent(new Event("updateSkin"));
 			dispatchEvent(new Event("updateAlpha"));
+			updateDirectionArrow();
 		}
 
 		private function handleDown(e:Event):void {
@@ -141,6 +171,37 @@
 			return "Delete Item"; // When nothing is selected
 		}
 
+        private function updateDirectionArrow():void {
+            if (controller.state is SelectedWay) {
+                var w:Way = Way(controller.state.firstSelected);
+                if (w) { // not entirely sure why this protection is necessary, but it appears so
+                    if (w.isArea()) {
+                        // so Way.clockwise appears to give wrong results. Patches welcome, I guess, but for now...
+                        w.clockwise? rotateButtonStack.selectedChild = antiClockwiseBox : rotateButtonStack.selectedChild = clockwiseBox;
+                    } else {
+                        rotateButtonStack.selectedChild = arrowBoxWrapper;
+                        // reset and reposition back to the starting point relative to its parent
+                        rotate.end();
+                        angle = 0;
+                        rotate.play();
+                        arrowBox.x = 0;
+                        arrowBox.y = 0;
+
+                        // move
+                        rotate.end();
+                        angle = w.angle;
+                        rotate.play();
+                    }
+                }
+            }
+        }
+
+        private function reverseClicked():void {
+            if(canDo('reverseDirection')) {
+                doReverseDirection();
+            }
+        }
+
 		// --------------------------------------------------------------------------------
 		// Individual toolbox actions
 
@@ -160,53 +221,7 @@
 		}
 		
 		public function doMerge():void {
-			var changed:Boolean;
-			var waylist:Array=controller.state.selectedWays;
-			do {
-				// ** FIXME - we should have one CompositeUndoableAction for the whole caboodle,
-				// but that screws up the execution order and can make the merge not work
-				var undo:CompositeUndoableAction = new CompositeUndoableAction("Merge ways");
-				changed=tryMerge(waylist, undo);
-				MainUndoStack.getGlobalStack().addAction(undo);
-			} while (changed==true);
-			controller.setState(controller.findStateForSelection(waylist));
-		}
-		
-		private function tryMerge(waylist:Array, undo:CompositeUndoableAction):Boolean {
-			var way1:Way, way2:Way, del:uint;
-			for (var i:uint=0; i<waylist.length; i++) {
-				for (var j:uint=0; j<waylist.length; j++) {
-					if (waylist[i]!=waylist[j]) {
-
-						// Preserve positive IDs if we can
-						if (waylist[i].id < waylist[j].id && waylist[i].id >= 0) {
-							way1=waylist[i]; way2=waylist[j]; del=j;
-						} else {
-							way1=waylist[j]; way2=waylist[i]; del=i;
-						}
-
-						// Merge as appropriate
-						if (way1.getNode(0)==way2.getNode(0)) {
-							waylist.splice(del,1);
-							undo.push(new MergeWaysAction(way1,way2,0,0));
-							return true;
-						} else if (way1.getNode(0)==way2.getLastNode()) { 
-							waylist.splice(del,1);
-							undo.push(new MergeWaysAction(way1,way2,0,way2.length-1));
-							return true;
-						} else if (way1.getLastNode()==way2.getNode(0)) {
-							waylist.splice(del,1);
-							undo.push(new MergeWaysAction(way1,way2,way1.length-1,0));
-							return true;
-						} else if (way1.getLastNode()==way2.getLastNode()) { 
-							waylist.splice(del,1);
-							undo.push(new MergeWaysAction(way1,way2,way1.length-1,way2.length-1));
-							return true;
-						}
-					}
-				}
-			}
-			return false;
+			controller.setState(SelectedMultiple(controller.state).mergeWays());
 		}
 
 		public function doReverseDirection():void {

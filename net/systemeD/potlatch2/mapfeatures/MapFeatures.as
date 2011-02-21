@@ -1,17 +1,11 @@
 package net.systemeD.potlatch2.mapfeatures {
 
-    import flash.events.EventDispatcher;
     import flash.events.Event;
-    import flash.net.URLLoader;
-
-	import flash.system.Security;
-	import flash.net.*;
-
-	import mx.core.UIComponent;
-	import mx.controls.DataGrid;
-
+    import flash.events.EventDispatcher;
+    import flash.net.*;
+    
+    import net.systemeD.halcyon.NestedXMLLoader;
     import net.systemeD.halcyon.connection.*;
-	import net.systemeD.halcyon.NestedXMLLoader;
 
     /** All the information about all available map features that can be selected by the user or matched against entities in the map.
     * The list of map features is populated from an XML file the first time the MapFeatures instance is accessed.
@@ -102,9 +96,16 @@ package net.systemeD.potlatch2.mapfeatures {
                 var match:Boolean = true;
 
                 // check for matching tags
+                // the "match" attribute lets you specify other values that will match this feature
+                // but won't affect the default value assigned. format is "*" or a regex.
                 for each(var tag:Object in feature.tags) {
                     var entityTag:String = entity.getTag(tag.k);
-                    match = entityTag == tag.v || (entityTag != null && tag.v == "*");
+                    if (entityTag == null) { match = false; break; }
+                    match = 
+                        tag.v == entityTag 
+                     || tag.v == "*"
+                     || tag.vmatch == "*"
+                     || tag.vmatch != "" && entityTag.match(new RegExp("^" + tag.vmatch + "$"));
                     if ( !match ) break;
                 }
 
@@ -189,11 +190,11 @@ package net.systemeD.potlatch2.mapfeatures {
             var a:Array=[];
 
             for (var k:String in _tags[type]) { list.push(k); }
-                list.sort();
+            list.sort();
 
-                for each (k in list) { a.push( { name: k } ); }
-                    return a;
-                }
+            for each (k in list) { a.push( { name: k } ); }
+            return a;
+        }
 
         /** Get all the possible values that could go with a given key and type.
         * TODO: Include values previously entered by the user, but not existent in XML file.
