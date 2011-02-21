@@ -12,6 +12,10 @@
 		<terms_url>http://opengeodata.org/microsoft-imagery-details</terms_url>
 		<default>yes</default>
 	</set>
+    <set>
+        <name>MapQuest Open Aerial</name>
+        <url>http://oatile1.mqcdn.com/naip/$z/$x/$y.png</url>
+    </set>
 	<set>
 		<name>OSM - Mapnik</name>
 		<url>http://tile.openstreetmap.org/$z/$x/$y.png</url>
